@@ -1,0 +1,52 @@
+{
+  "data": [
+    {
+      "_id": "alnaseej_product_006",
+      "title": "شال حرير فاخر",
+      "titleEn": "Luxury Silk Shal",
+      "description": "شال حرير فاخر بألوان متعددة وتصاميم مميزة، يجمع بين الأناقة والراحة ومناسب لجميع المناسبات.",
+      "descriptionEn": "Luxury silk Shal in multiple colors and distinctive designs, combining elegance and comfort, suitable for all occasions.",
+      "price": 85,
+      "priceAfterDiscount": 70,
+      "quantity": 40,
+      "ratingsAverage": 4.8,
+      "ratingsQuantity": 86,
+      "sold": 175,
+      "category": "category_1778188148317_2pb2w",
+      "brand": "",
+      "imageCover": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
+      "images": [],
+      "isLocal": true,
+      "createdAt": "2024-01-06T09:00:00.000Z",
+      "updatedAt": "2026-05-08T10:00:24.284Z"
+    },
+    {
+      "_id": "product_1778186621359_3agz36",
+      "title": "الزي العوماني",
+      "description": "الزي العوماني",
+      "price": 0.03,
+      "priceAfterDiscount": 0.03,
+      "quantity": 2,
+      "category": "category_1778192435114_aqoi49",
+      "brand": "",
+      "imageCover": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
+      "images": [],
+      "createdAt": "2026-05-07T20:43:41.359Z",
+      "updatedAt": "2026-05-08T10:01:10.820Z"
+    },
+    {
+      "_id": "product_1778240260263_6tnnnr",
+      "title": "شال عماني فاخر",
+      "description": "شال عماني فاخر",
+      "price": 10,
+      "priceAfterDiscount": 10,
+      "quantity": 5,
+      "category": "category_1778192435114_aqoi49",
+      "brand": "",
+      "imageCover": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
+      "images": [],
+      "createdAt": "2026-05-08T11:37:40.263Z",
+      "updatedAt": "2026-05-08T11:37:40.263Z"
+    }
+  ]
+}

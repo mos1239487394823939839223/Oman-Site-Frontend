@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "_id": "user_1778193864190_4hbrb5v",
+      "name": "azammmmm sherif kamel hassan",
+      "email": "mohamedsccherif21101@gmail.com",
+      "password": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+      "phone": "mohamedsherif21101@gmail.com",
+      "role": "user",
+      "active": true,
+      "addresses": [],
+      "createdAt": "2026-05-07T22:44:24.189Z",
+      "updatedAt": "2026-05-07T22:44:24.189Z"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "data": [
+    {
+      "_id": "subcategory_1778192466555_4yjisk",
+      "name": "mohamed sherif kamel hassan",
+      "image": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
+      "category": "category_1778188148317_2pb2w",
+      "slug": "mohamed-sh22erif-kamel-hassan",
+      "createdAt": "2026-05-07T22:21:06.555Z",
+      "updatedAt": "2026-05-07T22:21:06.555Z"
+    },
+    {
+      "_id": "subcategory_1778193288129_xji79k",
+      "name": "mohamed sherif kamel hassan",
+      "image": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
+      "category": "category_1778188148317_2pb2w",
+      "slug": "mohamed-sherif-kaؤmel-hassan",
+      "createdAt": "2026-05-07T22:34:48.129Z",
+      "updatedAt": "2026-05-07T22:34:48.130Z"
+    }
+  ]
+}

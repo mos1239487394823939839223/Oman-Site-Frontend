@@ -1,0 +1,58 @@
+{
+  "header": {
+    "home": "Home",
+    "products": "Products",
+    "gifts": "Gifts",
+    "reviews": "Reviews",
+    "favorites": "Favorites",
+    "cart": "Cart",
+    "signedInAs": "Signed in as",
+    "logout": "Logout",
+    "login": "Login",
+    "register": "Register"
+  },
+  "footer": {
+    "brand": "Watani",
+    "description": "Specialized in men's fashion and Omani traditional wear since 2010. High-quality handmade Mussar, Shal, and Dishdasha.",
+    "quickLinks": "Quick Links",
+    "contactInfo": "Contact Information",
+    "home": "Home",
+    "products": "Products",
+    "reviews": "Reviews",
+    "favorites": "Favorites",
+    "cart": "Cart",
+    "address": "Muscat, Sultanate of Oman",
+    "hours": "Sun-Thu: 9AM-10PM, Fri-Sat: 2PM-10PM",
+    "rights": "© 2024 Watani. All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
+  },
+  "home": {
+    "findStyle": "Find your perfect traditional style",
+    "categories": "Traditional Categories",
+    "noCategories": "No categories found",
+    "checkBackLater": "Check back later for new arrivals",
+    "loading": "Loading...",
+    "pleaseWait": "Please wait...",
+    "addedToCart": "Product added to cart successfully!",
+    "authRequired": "Please login to add items to cart",
+    "failedToAddToCart": "Failed to add product to cart. Please try again.",
+    "collections": {
+      "mussar": "Mussar Collection",
+      "shal": "Luxury Shal",
+      "dishdasha": "Dishdasha",
+      "accessories": "Traditional Accessories"
+    }
+  },
+  "common": {
+    "language": "Language",
+    "arabic": "Arabic",
+    "english": "English",
+    "search": "Search for Mussar, Shal...",
+    "searchForProducts": "Search for traditional wear...",
+    "noProductsFound": "No traditional wear found for \"{{query}}\"",
+    "egp": "OMR",
+    "all": "All Collections",
+    "addToCart": "Add to Cart"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "_id": "category_1778188148317_2pb2w",
+      "name": "Mohamed ",
+      "image": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
+      "slug": "mohamed-sherif-kamel-hassan",
+      "createdAt": "2026-05-07T21:09:08.317Z",
+      "updatedAt": "2026-05-08T10:01:41.955Z"
+    },
+    {
+      "_id": "category_1778192435114_aqoi49",
+      "name": "mohamed sherif",
+      "image": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
+      "slug": "mohamed-sherif",
+      "createdAt": "2026-05-07T22:20:35.114Z",
+      "updatedAt": "2026-05-08T10:01:52.314Z"
+    },
+    {
+      "_id": "category_1778193303456_ck67b",
+      "name": "mohamed sherif kamel",
+      "image": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
+      "slug": "mohamed-sherif-kamel",
+      "createdAt": "2026-05-07T22:35:03.456Z",
+      "updatedAt": "2026-05-08T10:02:08.463Z"
+    }
+  ]
+}

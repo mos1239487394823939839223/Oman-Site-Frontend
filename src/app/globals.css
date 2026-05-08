@@ -1,0 +1,298 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --primary: #1a3a3a;
+  --primary-hover: #6f1e3d;
+  
+  /* --- Brand & Design Colors --- */
+  --accent: #c5a059;
+  --accent-hover: #b08d4a;
+  --section-dark: #1a202c;
+  --section-teal: #2c5e5e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  
+  /* --- Custom Mappings --- */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-section-dark: var(--section-dark);
+  --color-section-teal: var(--section-teal);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background-color: #F9FAFB; /* Global background for depth */
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.6; /* Improved global readability */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Global Typography Weights */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+p, span, li, a {
+  font-weight: 400;
+}
+
+/* Global Input & Form Design */
+input, textarea, select {
+  border: 1px solid #D1D5DB !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  background-color: #ffffff !important;
+  transition: all 0.2s ease-in-out !important;
+  outline: none !important;
+}
+
+/* High Contrast Placeholder Fix */
+::placeholder {
+  color: #525252 !important;
+  opacity: 1 !important; /* Prevent browser fading */
+}
+
+/* Interactive Focus States */
+input:focus, textarea:focus, select:focus {
+  border-color: #1a202c !important; /* Brand Primary */
+  ring: 2px;
+  box-shadow: 0 0 0 2px rgba(26, 32, 44, 0.1) !important;
+}
+
+/* Global Icon Opacity */
+svg {
+  opacity: 0.85;
+}
+
+/* Premium Card System Utility */
+.premium-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.premium-card:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+/* Standardized Spacing & Buttons */
+.section-padding {
+  padding: 5rem 1.5rem;
+}
+
+.btn-primary {
+  background-color: #1a202c;
+  color: white;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  background-color: #2d3748;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #1a202c;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 2px solid #1a202c;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-secondary:hover {
+  background-color: #1a202c;
+  color: white;
+}
+
+/* ============================================
+   PROFESSIONAL LAYOUT SYSTEM
+   ============================================ */
+
+/* 1. Centered Container — 1200px max-width */
+.site-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;  /* 24px */
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .site-container {
+    padding-left: 2rem;   /* 32px */
+    padding-right: 2rem;
+  }
+}
+
+/* 2. Section Alternation for Visual Separation */
+.section-white {
+  background-color: #FFFFFF;
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+.section-muted {
+  background-color: #F8FAFC;
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+.section-dark {
+  background-color: var(--section-dark);
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+  color: #ffffff;
+}
+
+/* 3. Visual Hierarchy — Heading Scale */
+.heading-xl {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #1a202c;
+}
+
+.heading-lg {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1a202c;
+}
+
+.heading-md {
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-weight: 700;
+  line-height: 1.3;
+  color: #1a202c;
+}
+
+.subheading {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #6B7280;
+  line-height: 1.7;
+}
+
+/* 4. Two-Column Layout (Desktop) → Stack on Mobile */
+.two-col-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .two-col-layout {
+    grid-template-columns: 2fr 1fr;
+    gap: 3rem;
+  }
+}
+
+/* 5. Consistent 12px Rounded Corners System */
+.rounded-system {
+  border-radius: 12px !important;
+}
+
+.rounded-system-sm {
+  border-radius: 8px !important;
+}
+
+.rounded-system-lg {
+  border-radius: 20px !important;
+}
+
+.rounded-system-xl {
+  border-radius: 28px !important;
+}
+
+/* 6. Grouping Card — for Info Groups */
+.group-card {
+  background-color: #ffffff;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+/* Soft Shadow Variants */
+.shadow-soft {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+.shadow-soft-md {
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.08), 0 4px 10px -5px rgb(0 0 0 / 0.04);
+}
+
+.shadow-soft-lg {
+  box-shadow: 0 20px 40px -10px rgb(0 0 0 / 0.1);
+}
+
+/* 7. Spacing Scale (8px Base) */
+.space-xs  { margin-bottom: 0.5rem;  }   /* 8px  */
+.space-sm  { margin-bottom: 1rem;    }   /* 16px */
+.space-md  { margin-bottom: 1.5rem;  }   /* 24px */
+.space-lg  { margin-bottom: 2rem;    }   /* 32px */
+.space-xl  { margin-bottom: 3rem;    }   /* 48px */
+.space-2xl { margin-bottom: 4rem;    }   /* 64px */
+
+/* 8. Mobile Optimization */
+@media (max-width: 768px) {
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+
+  .section-white,
+  .section-muted,
+  .section-dark {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  .two-col-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .heading-xl {
+    font-size: 2rem;
+  }
+
+  .heading-lg {
+    font-size: 1.5rem;
+  }
+}
