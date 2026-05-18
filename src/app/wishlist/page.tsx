@@ -1,11 +1,13 @@
 "use client";
 
-import { useWishlist } from "@/components/WishlistProvider";
+import { useWishlist } from "@/components/WishlistProvider.tsx";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import ProductCard from "@/components/ProductCard";
+import ProductCard from "@/components/ProductCard.tsx";
 import { FaHeart } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function WishlistPage() {
   const context = useWishlist();
@@ -14,6 +16,8 @@ export default function WishlistPage() {
   const loading = context?.loading || false;
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
+  const { dir } = useLanguage();
 
   useEffect(() => {
     if (isAuthenticated && typeof fetchWishlist === 'function') {
@@ -23,28 +27,28 @@ export default function WishlistPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50/50 py-20">
+      <div className="min-h-screen py-20">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="bg-white rounded-[2.5rem] p-16 shadow-sm border border-gray-100 text-center space-y-8">
+          <div className="bg-white/5 backdrop-blur-xl rounded-[2.5rem] p-16 shadow-2xl border border-white/10 text-center space-y-8">
             <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-5xl">
               🔒
             </div>
             <div className="space-y-4">
-              <h1 className="text-3xl font-black text-[#1a3a3a]">Please Login</h1>
-              <p className="text-gray-500 font-medium max-w-md mx-auto">Sign in to see your saved products and manage your favorites list</p>
+              <h1 className="text-3xl font-black text-white">{t('wishlist.loginRequired')}</h1>
+              <p className="text-gray-500 font-medium max-w-md mx-auto">{t('wishlist.emptyDescription')}</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={() => router.push('/login')}
-                className="bg-[#1a3a3a] text-white px-10 py-4 rounded-2xl font-black transition-all hover:bg-[#6f1e3d] hover:scale-105 active:scale-95 shadow-xl shadow-[#1a3a3a]/10"
+                className="bg-accent text-maroon-deep px-10 py-4 rounded-2xl font-black transition-all hover:bg-white hover:scale-105 active:scale-95 shadow-xl"
               >
-                Login
+                {t('header.login')}
               </button>
               <button
-                onClick={() => router.push('/signup')}
-                className="bg-white text-[#1a3a3a] border-2 border-[#1a3a3a]/10 px-10 py-4 rounded-2xl font-black transition-all hover:bg-gray-50"
+                onClick={() => router.push('/register')}
+                className="bg-white/5 text-white border-2 border-white/10 px-10 py-4 rounded-2xl font-black transition-all hover:bg-white/10"
               >
-                Sign Up
+                {t('header.register')}
               </button>
             </div>
           </div>
@@ -54,19 +58,19 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-16">
+    <div className="min-h-screen py-16" dir={dir}>
       <div className="max-w-7xl mx-auto px-6">
-        
+
         {/* Header */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex items-center gap-4 mb-10">
+        <div className="bg-white/5 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/10 flex items-center gap-4 mb-10">
           <FaHeart className="text-red-500 text-2xl" />
-          <h1 className="text-2xl font-black text-[#1a3a3a] tracking-tight uppercase">My Favorites</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight uppercase">{t('wishlist.title')}</h1>
         </div>
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-[2.5rem] h-[450px] animate-pulse border border-gray-100">
+              <div key={i} className="bg-white/5 rounded-[2.5rem] h-[450px] animate-pulse border border-white/10">
                 <div className="h-72 bg-gray-100 rounded-t-[2.5rem]"></div>
                 <div className="p-6 space-y-4">
                   <div className="h-4 bg-gray-100 rounded w-1/4"></div>
@@ -77,7 +81,7 @@ export default function WishlistPage() {
             ))}
           </div>
         ) : wishlistItems.length === 0 ? (
-          <div className="bg-white rounded-[2.5rem] py-32 shadow-sm border border-gray-100 text-center space-y-10 animate-in fade-in zoom-in-95 duration-500">
+          <div className="bg-white/5 backdrop-blur-xl rounded-[2.5rem] py-32 shadow-2xl border border-white/10 text-center space-y-10 animate-in fade-in zoom-in-95 duration-500">
             <div className="relative inline-block">
               <FaHeart className="text-gray-100 text-9xl" />
               <div className="absolute inset-0 flex items-center justify-center">
@@ -85,16 +89,16 @@ export default function WishlistPage() {
               </div>
             </div>
             <div className="space-y-4">
-              <h3 className="text-3xl font-black text-[#1a3a3a]">No Favorites Yet</h3>
+              <h3 className="text-3xl font-black text-white">{t('wishlist.emptyTitle')}</h3>
               <p className="text-gray-500 font-medium max-w-lg mx-auto text-lg px-6">
-                You haven't added any products to your favorites yet. Start browsing to find products you love!
+                {t('wishlist.emptyDescription')}
               </p>
             </div>
             <button
               onClick={() => router.push('/products')}
-              className="bg-[#1a3a3a] text-white px-12 py-5 rounded-[2rem] font-black shadow-xl shadow-[#1a3a3a]/10 hover:bg-[#6f1e3d] transition-all hover:scale-105 active:scale-95 text-lg"
+              className="bg-accent text-maroon-deep px-12 py-5 rounded-[2rem] font-black shadow-xl hover:bg-white transition-all hover:scale-105 active:scale-95 text-lg"
             >
-              Start Browsing
+              {t('wishlist.startBrowsing')}
             </button>
           </div>
         ) : (

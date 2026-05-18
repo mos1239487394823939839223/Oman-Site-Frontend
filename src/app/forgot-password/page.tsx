@@ -20,7 +20,7 @@ export default function ForgotPasswordPage() {
       await forgotPassword(email);
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || "Failed to send reset code. Please try again.");
+      setError(err.message || "تعذر إرسال رمز الاستعادة. يرجى المحاولة مرة أخرى.");
     } finally {
       setLoading(false);
     }
@@ -38,10 +38,10 @@ export default function ForgotPasswordPage() {
             </div>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Check your email
+            تحقق من بريدك الإلكتروني
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            We've sent a reset code to <strong>{email}</strong>
+            لقد أرسلنا رمز الاستعادة إلى <strong>{email}</strong>
           </p>
         </div>
 
@@ -49,23 +49,23 @@ export default function ForgotPasswordPage() {
           <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 text-center">
             <div className="mb-6">
               <p className="text-gray-600 mb-4">
-                Please check your email and enter the reset code to continue.
+                يرجى التحقق من بريدك الإلكتروني وإدخال رمز الاستعادة للمتابعة.
               </p>
               <Link
                 href="/verify-reset-code"
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50"
               >
-                Enter Reset Code
+                إدخال رمز الاستعادة
               </Link>
             </div>
 
             <div className="text-sm text-gray-600">
-              <p>Didn't receive the email? Check your spam folder or</p>
+              <p>لم يصلك البريد الإلكتروني؟ تحقق من مجلد الرسائل غير المرغوب فيها أو</p>
               <button
                 onClick={() => setSuccess(false)}
                 className="font-medium text-primary hover:text-primary/80"
               >
-                try again
+                حاول مرة أخرى
               </button>
             </div>
           </div>
@@ -84,11 +84,11 @@ export default function ForgotPasswordPage() {
             </svg>
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Forgot your password?
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          هل نسيت كلمة المرور؟
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Enter your email address and we'll send you a reset code.
+          أدخل بريدك الإلكتروني وسنرسل لك رمز استعادة.
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+                البريد الإلكتروني
               </label>
               <div className="mt-1">
                 <input
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary/50 focus:border-primary sm:text-sm"
-                  placeholder="Enter your email"
+                  placeholder="أدخل بريدك الإلكتروني"
                 />
               </div>
             </div>
@@ -132,10 +132,10 @@ export default function ForgotPasswordPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Sending reset code...
+                    جارٍ إرسال رمز الاستعادة...
                   </div>
                 ) : (
-                  "Send reset code"
+                  "إرسال رمز الاستعادة"
                 )}
               </button>
             </div>
@@ -144,7 +144,7 @@ export default function ForgotPasswordPage() {
           <div className="mt-6">
             <div className="text-center">
               <Link href="/login" className="font-medium text-primary hover:text-primary/80">
-                Back to sign in
+                العودة إلى تسجيل الدخول
               </Link>
             </div>
           </div>

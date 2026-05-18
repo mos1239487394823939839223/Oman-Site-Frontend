@@ -10,14 +10,14 @@ import { getCategories, getBrands } from "@/services/clientApi";
 import ProductForm from "@/components/admin/ProductForm";
 import {
   FaPlus, FaTimes, FaBox, FaSearch,
-  FaTrash, FaEdit, FaDatabase
+  FaTrash, FaEdit, FaDatabase, FaStar
 } from "react-icons/fa";
 
 export default function ProductsManagementPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [brands, setBrands] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
@@ -33,14 +33,14 @@ export default function ProductsManagementPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [localRes, catsRes, brandsRes] = await Promise.all([
+      const [localRes, catsRes, subCatsRes] = await Promise.all([
         adminApi.getAllProducts().catch(() => ({ data: [] })),
         adminApi.getAllCategories().catch(() => getCategories()),
-        adminApi.getAllBrands().catch(() => getBrands()),
+        adminApi.getAllSubcategories().catch(() => ({ data: [] })),
       ]);
       setProducts(localRes?.data || []);
       setCategories(catsRes?.data || []);
-      setBrands(brandsRes?.data || []);
+      setSubcategories(subCatsRes?.data || []);
     } catch {
       toast.error("Load Error", "Failed to load products");
     } finally {
@@ -121,7 +121,7 @@ export default function ProductsManagementPage() {
                   <FaTimes className="w-4 h-4" />
                 </button>
               </div>
-              <ProductForm product={editingProduct || undefined} categories={categories} brands={brands}
+              <ProductForm product={editingProduct || undefined} categories={categories} subcategories={subcategories}
                 onSubmit={handleFormSubmit} onCancel={() => { setShowForm(false); setEditingProduct(null); }}
                 loading={formLoading} />
             </div>
@@ -150,7 +150,14 @@ export default function ProductsManagementPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-white font-bold text-sm truncate">{product.title}</p>
-                      <span className="flex items-center gap-1 text-[10px] font-black text-[#c5a059] uppercase"><FaDatabase className="w-2 h-2"/> Dashboard Product</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="flex items-center gap-1 text-[10px] font-black text-[#c5a059] uppercase"><FaDatabase className="w-2 h-2"/> Dashboard Product</span>
+                        {product.isRecommended && (
+                          <span className="flex items-center gap-1 text-[10px] font-black text-yellow-500 uppercase bg-yellow-500/10 px-1.5 py-0.5 rounded-md">
+                            <FaStar className="w-2 h-2"/> Best Seller
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right text-white font-black text-sm">
                       {product.price?.toLocaleString()} <span className="text-[10px] text-gray-500">OMR</span>

@@ -136,6 +136,7 @@ function SubcategoriesManagementContent() {
                 <SubcategoryForm
                   subcategory={editingSubcategory || undefined}
                   categories={categories}
+                  allSubcategories={subcategories}
                   onSubmit={handleFormSubmit}
                   onCancel={handleCancel}
                   loading={formLoading}

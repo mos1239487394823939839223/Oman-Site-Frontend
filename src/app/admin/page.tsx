@@ -8,14 +8,16 @@ import StatsCard from "@/components/admin/StatsCard";
 import { ToastProvider } from "@/components/admin/ToastProvider";
 import {
   FaBox, FaShoppingBag, FaUsers, FaMoneyBillWave,
-  FaTags, FaImages, FaEye, FaCheckCircle
+  FaTags, FaImages, FaEye, FaCheckCircle, FaGift
 } from "react-icons/fa";
 import { adminApi } from "@/services/adminApi";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 
 function AdminDashboardContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     totalProducts: 0, totalOrders: 0, totalUsers: 0, totalRevenue: 0,
   });
@@ -55,12 +57,13 @@ function AdminDashboardContent() {
   };
 
   const quickLinks = [
-    { label: "Add Product", href: "/admin/products", icon: FaBox, color: "text-[#c5a059]", bg: "bg-[#c5a059]/10" },
-    { label: "Manage Banners", href: "/admin/banners", icon: FaImages, color: "text-blue-400", bg: "bg-blue-500/10" },
-    { label: "View Orders", href: "/admin/orders", icon: FaShoppingBag, color: "text-purple-400", bg: "bg-purple-500/10" },
-    { label: "Manage Users", href: "/admin/users", icon: FaUsers, color: "text-emerald-400", bg: "bg-emerald-500/10" },
-    { label: "Edit Translations", href: "/admin/translations", icon: FaTags, color: "text-pink-400", bg: "bg-pink-500/10" },
-    { label: "View Store", href: "/", icon: FaEye, color: "text-amber-400", bg: "bg-amber-500/10" },
+    { labelKey: "admin.addProduct", href: "/admin/products", icon: FaBox, color: "text-[#c5a059]", bg: "bg-[#c5a059]/10" },
+    { labelKey: "admin.manageGifts", href: "/admin/gifts", icon: FaGift, color: "text-rose-400", bg: "bg-rose-500/10" },
+    { labelKey: "admin.manageBanners", href: "/admin/banners", icon: FaImages, color: "text-blue-400", bg: "bg-blue-500/10" },
+    { labelKey: "admin.manageOrders", href: "/admin/orders", icon: FaShoppingBag, color: "text-purple-400", bg: "bg-purple-500/10" },
+    { labelKey: "admin.manageUsers", href: "/admin/users", icon: FaUsers, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+    { labelKey: "admin.editTranslations", href: "/admin/translations", icon: FaTags, color: "text-pink-400", bg: "bg-pink-500/10" },
+    { labelKey: "admin.viewStore", href: "/", icon: FaEye, color: "text-amber-400", bg: "bg-amber-500/10" },
   ];
 
   return (
@@ -72,8 +75,8 @@ function AdminDashboardContent() {
         <main className="flex-1 p-5 lg:p-8 min-h-screen overflow-x-hidden">
           {/* Page Title */}
           <div className="mb-8">
-            <h1 className="text-2xl font-black text-white">Dashboard Overview</h1>
-            <p className="text-gray-500 text-sm mt-1">Welcome back! Here's what's happening today.</p>
+            <h1 className="text-2xl font-black text-white">{t('admin.dashboardTitle')}</h1>
+            <p className="text-gray-500 text-sm mt-1">{t('admin.dashboardSubtitle')}</p>
           </div>
 
           {/* Stats Cards */}
@@ -90,7 +93,7 @@ function AdminDashboardContent() {
 
           {/* Quick Actions */}
           <div className="mb-8">
-            <h2 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4">Quick Actions</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4">{t('admin.quickActions')}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
               {quickLinks.map((link) => (
                 <Link
@@ -101,7 +104,7 @@ function AdminDashboardContent() {
                   <div className={`w-10 h-10 ${link.bg} ${link.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
                     <link.icon className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-bold text-gray-400 group-hover:text-white transition-colors">{link.label}</span>
+                  <span className="text-xs font-bold text-gray-400 group-hover:text-white transition-colors">{t(link.labelKey)}</span>
                 </Link>
               ))}
             </div>
@@ -112,8 +115,8 @@ function AdminDashboardContent() {
             {/* Recent Products */}
             <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="font-black text-white text-sm">Recent Products</h2>
-                <Link href="/admin/products" className="text-xs text-[#c5a059] hover:text-[#e6c35f] font-bold">View All →</Link>
+                <h2 className="font-black text-white text-sm">{t('admin.recentProducts')}</h2>
+                <Link href="/admin/products" className="text-xs text-[#c5a059] hover:text-[#e6c35f] font-bold">{t('admin.viewAll')} →</Link>
               </div>
               {loading ? (
                 <div className="space-y-3">
@@ -150,8 +153,8 @@ function AdminDashboardContent() {
             {/* Recent Orders */}
             <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="font-black text-white text-sm">Recent Orders</h2>
-                <Link href="/admin/orders" className="text-xs text-[#c5a059] hover:text-[#e6c35f] font-bold">View All →</Link>
+                <h2 className="font-black text-white text-sm">{t('admin.recentOrders')}</h2>
+                <Link href="/admin/orders" className="text-xs text-[#c5a059] hover:text-[#e6c35f] font-bold">{t('admin.viewAll')} →</Link>
               </div>
               {loading ? (
                 <div className="space-y-3">

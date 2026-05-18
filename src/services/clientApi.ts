@@ -195,20 +195,28 @@ export async function signup(data: {
   });
   
   if (!res.ok) {
-    let errorData = {};
+    let errorData: any = {};
     let errorText = '';
     
     try {
       errorText = await res.text();
-      errorData = JSON.parse(errorText);
+      if (errorText) {
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (parseError) {
+          // Keep raw text if JSON parsing fails
+          errorData = { raw: errorText };
+        }
+      }
     } catch (parseError) {
+      console.error('Error reading response:', parseError);
     }
     
     console.error('Signup error:', {
       status: res.status,
       statusText: res.statusText,
-      errorData,
-      errorText,
+      errorData: errorData || {},
+      errorText: errorText || 'No error text',
       url: res.url
     });
     
@@ -221,8 +229,8 @@ export async function signup(data: {
     } else if (res.status === 500) {
       throw new Error("Server error. Please try again later.");
     } else {
-      const errorMessage = (errorData as any)?.message || errorText || res.statusText;
-      throw new Error(`Signup failed: ${res.status} - ${errorMessage}`);
+      const errorMessage = errorData?.message || errorData?.error || errorText || res.statusText;
+      throw new Error(`Signup failed: ${res.status} - ${errorMessage || 'Unknown error'}`);
     }
   }
   
@@ -237,20 +245,30 @@ export async function signin(data: { email: string; password: string }) {
   });
   
   if (!res.ok) {
-    let errorData = {};
+    let errorData: any = {};
     let errorText = '';
     
     try {
       errorText = await res.text();
-      errorData = JSON.parse(errorText);
+      if (errorText) {
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (parseError) {
+          // Keep raw text if JSON parsing fails
+          errorData = { raw: errorText };
+        }
+      }
     } catch (parseError) {
+      console.error('Error reading response:', parseError);
     }
     
-    console.error('Signin error:', {
+    const errorMessage = errorData?.message || errorData?.errors?.[0]?.msg || errorText || res.statusText || 'Unknown error';
+    
+    console.error(`Signin error (${res.status}): ${errorMessage}`, {
       status: res.status,
       statusText: res.statusText,
-      errorData,
-      errorText,
+      errorData: errorData,
+      errorText: errorText,
       url: res.url
     });
     
@@ -263,8 +281,8 @@ export async function signin(data: { email: string; password: string }) {
     } else if (res.status === 500) {
       throw new Error("Server error. Please try again later.");
     } else {
-      const errorMessage = (errorData as any)?.message || errorText || res.statusText;
-      throw new Error(`Signin failed: ${res.status} - ${errorMessage}`);
+      const errorMessage = errorData?.message || errorData?.error || errorText || res.statusText;
+      throw new Error(`Signin failed: ${res.status} - ${errorMessage || 'Unknown error'}`);
     }
   }
   
@@ -407,7 +425,7 @@ export async function addToCart(productId: string, token: string) {
       };
     }
 
-    console.log('addToCart: Making API request', { productId, hasToken: !!token });
+
     
     const res = await fetch(`${API_BASE}/cart`, {
       method: "POST",
@@ -418,7 +436,7 @@ export async function addToCart(productId: string, token: string) {
       body: JSON.stringify({ productId }),
     });
     
-    console.log('addToCart: API response status:', res.status);
+
     
     if (!res.ok) {
       if (res.status === 401) {
@@ -434,7 +452,7 @@ export async function addToCart(productId: string, token: string) {
     }
     
     const data = await res.json();
-    console.log('addToCart: API response data:', data);
+
     return data;
   } catch (error) {
     console.error('addToCart: Error occurred:', error);
@@ -456,13 +474,13 @@ export async function getCart(token: string) {
       };
     }
 
-    console.log('getCart: Making API request with token:', token ? 'exists' : 'missing');
+
     
     const res = await fetch(`${API_BASE}/cart`, { 
       headers: { "Authorization": `Bearer ${token}` } 
     });
     
-    console.log('getCart: API response status:', res.status);
+
     
     if (!res.ok) {
       if (res.status === 401) {
@@ -485,7 +503,7 @@ export async function getCart(token: string) {
     }
     
     const data = await res.json();
-    console.log('getCart: API response data:', data);
+
     return data;
   } catch (error) {
     console.error('getCart: Error occurred:', error);
@@ -498,7 +516,7 @@ export async function getCart(token: string) {
 
 export async function updateCartItem(productId: string, count: number, token: string) {
   try {
-    console.log('updateCartItem: Making API request', { productId, count, hasToken: !!token });
+
     
     const res = await fetch(`${API_BASE}/cart/${productId}`, {
       method: "PUT",
@@ -509,7 +527,7 @@ export async function updateCartItem(productId: string, count: number, token: st
       body: JSON.stringify({ count }),
     });
     
-    console.log('updateCartItem: API response status:', res.status);
+
     
     if (!res.ok) {
       if (res.status === 401) {
@@ -525,7 +543,7 @@ export async function updateCartItem(productId: string, count: number, token: st
     }
     
     const data = await res.json();
-    console.log('updateCartItem: API response data:', data);
+
     return data;
   } catch (error) {
     console.error('updateCartItem: Error occurred:', error);
@@ -538,14 +556,14 @@ export async function updateCartItem(productId: string, count: number, token: st
 
 export async function removeCartItem(productId: string, token: string) {
   try {
-    console.log('removeCartItem: Making API request', { productId, hasToken: !!token });
+
     
     const res = await fetch(`${API_BASE}/cart/${productId}`, {
       method: "DELETE",
       headers: { "Authorization": `Bearer ${token}` },
     });
     
-    console.log('removeCartItem: API response status:', res.status);
+
     
     if (!res.ok) {
       if (res.status === 401) {
@@ -561,7 +579,7 @@ export async function removeCartItem(productId: string, token: string) {
     }
     
     const data = await res.json();
-    console.log('removeCartItem: API response data:', data);
+
     return data;
   } catch (error) {
     console.error('removeCartItem: Error occurred:', error);
@@ -574,14 +592,14 @@ export async function removeCartItem(productId: string, token: string) {
 
 export async function clearCart(token: string) {
   try {
-    console.log('clearCart: Making API request', { hasToken: !!token });
+
     
     const res = await fetch(`${API_BASE}/cart`, {
       method: "DELETE",
       headers: { "Authorization": `Bearer ${token}` },
     });
     
-    console.log('clearCart: API response status:', res.status);
+
     
     if (!res.ok) {
       if (res.status === 401) {
@@ -597,7 +615,7 @@ export async function clearCart(token: string) {
     }
     
     const data = await res.json();
-    console.log('clearCart: API response data:', data);
+
     return data;
   } catch (error) {
     console.error('clearCart: Error occurred:', error);
@@ -650,14 +668,7 @@ export async function getUserOrders(userId: string, token: string) {
 
 export async function createCheckoutSession(cartId: string, data: any, token: string) {
   try {
-    const url = `${API_BASE}/orders/checkout-session/${cartId}?url=http://localhost:3000`;
-    console.log('createCheckoutSession: Making API request', { 
-      url, 
-      cartId, 
-      hasToken: !!token,
-      tokenLength: token?.length || 0,
-      data 
-    });
+    const url = `${API_BASE}/orders/checkout-session/${cartId}?url=${window.location.origin}`;
     
     const res: Response = await fetch(url, {
       method: "POST",
@@ -668,17 +679,13 @@ export async function createCheckoutSession(cartId: string, data: any, token: st
       body: JSON.stringify(data),
     });
     
-    console.log('createCheckoutSession: API response status:', res.status);
-    console.log('createCheckoutSession: API response headers:', Object.fromEntries(res.headers.entries()));
-    
     if (!res.ok) {
       let errorData = {};
       try {
         const errorText = await res.text();
-        console.log('createCheckoutSession: Error response text:', errorText);
         errorData = JSON.parse(errorText);
       } catch (parseError) {
-        console.log('createCheckoutSession: Could not parse error response');
+        // Silently fail parse
       }
       
       console.error('createCheckoutSession: API error:', {
@@ -691,9 +698,6 @@ export async function createCheckoutSession(cartId: string, data: any, token: st
     }
     
     const responseData = await res.json();
-    console.log('createCheckoutSession: API response data:', responseData);
-    console.log('createCheckoutSession: Response data type:', typeof responseData);
-    console.log('createCheckoutSession: Response data keys:', Object.keys(responseData));
     return responseData;
   } catch (error) {
     console.error('createCheckoutSession: Error occurred:', error);

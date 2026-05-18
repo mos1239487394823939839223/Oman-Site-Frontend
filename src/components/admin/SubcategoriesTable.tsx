@@ -38,19 +38,16 @@ export default function SubcategoriesTable({
       sortable: true,
     },
     {
-      header: "Slug",
-      accessor: "slug",
-      sortable: true,
-    },
-    {
       header: "Category",
-      accessor: (row) => (
-        <span className="text-sm text-gray-600">
-          {typeof row.category === "object" && row.category !== null
-            ? row.category.name
-            : "N/A"}
-        </span>
-      ),
+      accessor: (row: any) => {
+        const cat1 = typeof row.category === "object" && row.category !== null ? row.category.name : "N/A";
+        const cat2 = row.category2 ? " + (Second Category)" : "";
+        return (
+          <span className="text-sm text-gray-600">
+            {cat1}{cat2}
+          </span>
+        );
+      },
       sortable: true,
     },
     {

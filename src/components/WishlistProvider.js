@@ -1,4 +1,1 @@
-"use client";
-
-export * from './WishlistProvider.tsx';
-export { WishlistProvider as default } from './WishlistProvider.tsx';
+// Overwritten in favor of WishlistProvider.tsx to prevent duplicate symbol declaration.

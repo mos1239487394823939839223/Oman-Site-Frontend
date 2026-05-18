@@ -6,19 +6,22 @@
       "titleEn": "Luxury Silk Shal",
       "description": "شال حرير فاخر بألوان متعددة وتصاميم مميزة، يجمع بين الأناقة والراحة ومناسب لجميع المناسبات.",
       "descriptionEn": "Luxury silk Shal in multiple colors and distinctive designs, combining elegance and comfort, suitable for all occasions.",
-      "price": 85,
+      "price": 84.97,
       "priceAfterDiscount": 70,
-      "quantity": 40,
+      "quantity": 42,
       "ratingsAverage": 4.8,
       "ratingsQuantity": 86,
       "sold": 175,
-      "category": "category_1778188148317_2pb2w",
+      "category": "category_1778629561479_9kw1nb",
       "brand": "",
-      "imageCover": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
+      "imageCover": "https://instagram.fcai19-11.fna.fbcdn.net/v/t51.82787-15/648372284_18562615612047493_658599845277315940_n.heic?stp=dst-jpg_e35_tt6&_nc_cat=102&ig_cache_key=Mzg0Nzk1NDU5MTY5MDI5ODY3MA%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=W1Mdu5T36AwQ7kNvwFGgKQo&_nc_oc=AdonImutyV_M4xUPLGdylTIUi6bYL8-RCW5uvekdqDb-jNCjJjJZ8N1z8OEMYwbaFD8&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fcai19-11.fna&_nc_gid=t_yoMUFQS_NuwQ8VKPwjEQ&_nc_ss=7a22e&oh=00_Af70BkpD9DTPfD0EslzCN6DBwUfKrgX3R15nTFsG_NLgsQ&oe=6A06117C",
       "images": [],
       "isLocal": true,
       "createdAt": "2024-01-06T09:00:00.000Z",
-      "updatedAt": "2026-05-08T10:00:24.284Z"
+      "updatedAt": "2026-05-14T19:38:46.315Z",
+      "subcategory": "subcategory_1778786190144_vq7coq",
+      "isRecommended": false,
+      "patternType": "نقش رفيع"
     },
     {
       "_id": "product_1778186621359_3agz36",
@@ -27,12 +30,15 @@
       "price": 0.03,
       "priceAfterDiscount": 0.03,
       "quantity": 2,
-      "category": "category_1778192435114_aqoi49",
+      "category": "category_1778629561479_9kw1nb",
       "brand": "",
       "imageCover": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
       "images": [],
       "createdAt": "2026-05-07T20:43:41.359Z",
-      "updatedAt": "2026-05-08T10:01:10.820Z"
+      "updatedAt": "2026-05-14T19:39:32.047Z",
+      "subcategory": "subcategory_1778786190144_vq7coq",
+      "isRecommended": false,
+      "patternType": "نقش عريض"
     },
     {
       "_id": "product_1778240260263_6tnnnr",
@@ -41,12 +47,28 @@
       "price": 10,
       "priceAfterDiscount": 10,
       "quantity": 5,
-      "category": "category_1778192435114_aqoi49",
+      "category": "category_1778188148317_2pb2w",
       "brand": "",
       "imageCover": "https://alsahwa.om/wp-content/uploads/2022/07/c21.gif",
       "images": [],
       "createdAt": "2026-05-08T11:37:40.263Z",
-      "updatedAt": "2026-05-08T11:37:40.263Z"
+      "updatedAt": "2026-05-14T19:15:21.155Z",
+      "subcategory": "subcategory_1778193288129_xji79k",
+      "isRecommended": true
+    },
+    {
+      "_id": "product_1778776293246_3fuovr",
+      "title": "شال حرير فاخر",
+      "description": "شال حرير فاخر بألوان متعددة وتصاميم مميزة، يجمع بين الأناقة والراحة ومناسب لجميع المناسبات.",
+      "price": 100,
+      "priceAfterDiscount": 20,
+      "quantity": 1000,
+      "category": "category_1778188148317_2pb2w",
+      "subcategory": "",
+      "imageCover": "https://instagram.fcai19-11.fna.fbcdn.net/v/t51.82787-15/648372284_18562615612047493_658599845277315940_n.heic?stp=dst-jpg_e35_tt6&_nc_cat=102&ig_cache_key=Mzg0Nzk1NDU5MTY5MDI5ODY3MA%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=W1Mdu5T36AwQ7kNvwFGgKQo&_nc_oc=AdonImutyV_M4xUPLGdylTIUi6bYL8-RCW5uvekdqDb-jNCjJjJZ8N1z8OEMYwbaFD8&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fcai19-11.fna&_nc_gid=t_yoMUFQS_NuwQ8VKPwjEQ&_nc_ss=7a22e&oh=00_Af70BkpD9DTPfD0EslzCN6DBwUfKrgX3R15nTFsG_NLgsQ&oe=6A06117C",
+      "images": [],
+      "createdAt": "2026-05-14T16:31:33.246Z",
+      "updatedAt": "2026-05-14T16:31:33.246Z"
     }
   ]
 }

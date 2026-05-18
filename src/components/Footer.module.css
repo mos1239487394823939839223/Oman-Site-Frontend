@@ -1,0 +1,160 @@
+.footerContainer {
+  position: relative;
+  overflow: hidden;
+  background-color: #5a1832;
+  color: #ffffff;
+  padding-top: 5rem;
+  padding-bottom: 0;
+}
+
+.backgroundGlow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.2;
+}
+
+.glowCircle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, #D4AF37 0%, transparent 70%);
+}
+
+.sectionCard {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2rem;
+  padding: 2rem;
+  transition: all 0.5s ease;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.sectionCard:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-5px);
+}
+
+.brandTitle {
+  font-size: 1.875rem;
+  font-weight: 900;
+  margin-bottom: 1rem;
+  letter-spacing: -0.05em;
+  color: #ffffff;
+}
+
+.description {
+  color: #ffffff;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  max-width: 500px;
+}
+
+.sectionHeading {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  color: #ffffff;
+  margin-bottom: 2rem;
+}
+
+.linkItem {
+  color: #ffffff;
+  transition: all 0.3s ease;
+  font-weight: 700;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.linkItem:hover {
+  color: #D4AF37;
+  padding-right: 0.5rem;
+}
+
+.contactCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.contactCard:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.contactIcon {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  color: #ffffff;
+}
+
+.contactText {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
+  word-break: break-all;
+  text-decoration: none;
+}
+
+.copyrightBar {
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 2rem 0;
+  margin-top: 4rem;
+}
+
+.copyrightText {
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  color: #ffffff;
+  letter-spacing: 0.025em;
+  margin: 0;
+}
+
+.socialButton {
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  color: #ffffff;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.socialButton:hover {
+  background: #D4AF37;
+  color: #5a1832;
+  transform: scale(1.1);
+}
+
+.socialButtonWhatsapp:hover {
+  background: #22c55e;
+  color: #ffffff;
+}

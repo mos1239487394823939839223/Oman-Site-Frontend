@@ -3,8 +3,8 @@
 import { ReactNode } from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import { CartProvider } from "@/components/CartProvider";
-import { WishlistProvider } from "@/components/WishlistProvider";
-import I18nProvider from "@/components/I18nProvider";
+import { WishlistProvider } from "@/components/WishlistProvider.tsx";
+import { LanguageProvider } from "@/components/LanguageProvider";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -12,7 +12,7 @@ interface ProvidersProps {
 
 export default function Providers({ children }: ProvidersProps) {
   return (
-    <I18nProvider>
+    <LanguageProvider>
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
@@ -20,7 +20,7 @@ export default function Providers({ children }: ProvidersProps) {
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>
-    </I18nProvider>
+    </LanguageProvider>
   );
 }
 

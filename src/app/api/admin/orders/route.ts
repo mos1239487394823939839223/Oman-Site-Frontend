@@ -36,3 +36,23 @@ export async function GET() {
   }
 }
 
+export async function POST(req: NextRequest) {
+  try {
+    const newOrder = await req.json();
+    const existing = readDataFile();
+    const orders: any[] = existing.data || [];
+
+    // Avoid duplicate by _id
+    const alreadyExists = orders.some((o) => o._id === newOrder._id);
+    if (!alreadyExists) {
+      orders.unshift({ ...newOrder, createdAt: newOrder.createdAt || new Date().toISOString() });
+    }
+
+    const success = writeDataFile({ data: orders });
+    if (!success) return NextResponse.json({ error: "Failed to save order" }, { status: 500 });
+
+    return NextResponse.json({ status: "success", data: newOrder });
+  } catch (error) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+}

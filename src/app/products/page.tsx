@@ -1,50 +1,333 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { getProducts, getProductsByCategory, searchProducts, getCategories, getBrands, Product } from "@/services/clientApi";
+import { useState, useEffect, Suspense, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getProducts, searchProducts, getCategories, getSubCategories, Product, Category, Subcategory } from "@/services/clientApi";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
-import { FaStar, FaShoppingCart, FaSearch, FaFilter, FaSort } from "react-icons/fa";
-import Heart from "@/components/HeartSimple";
+import CategoriesBar from "@/components/CategoriesBar";
+import { FaSort, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
+import ProductCard from "@/components/ProductCard.tsx";
 
-export default function ProductsPage() {
-  const { t, i18n } = useTranslation();
-  const [products, setProducts] = useState<Product[]>([]);
+interface ExtendedProduct extends Product {
+  subcategory?: string | string[] | { _id: string; name: string; image?: string };
+  patternType?: string;
+  isLocal?: boolean;
+}
+
+interface SelectedCategoryViewProps {
+  products: ExtendedProduct[];
+  subCategories: Subcategory[];
+  selectedCategory: string;
+  selectedSubCategory?: string;
+  categories: Category[];
+  onProductClick: (id: string) => void;
+  onSubCategoryClick: (name: string) => void;
+}
+
+function SelectedCategoryView({ 
+  products, 
+  subCategories, 
+  selectedCategory, 
+  selectedSubCategory, 
+  categories, 
+  onProductClick, 
+  onSubCategoryClick 
+}: SelectedCategoryViewProps) {
+  const { i18n } = useTranslation();
+  const catName = categories.find((c) => c._id === selectedCategory)?.name || 'القسم المختار';
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 200;
+      scrollContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const getSubId = (p: ExtendedProduct): string => {
+    const sub = p.subcategory;
+    if (!sub) return '';
+    if (typeof sub === 'string') return sub;
+    if (Array.isArray(sub)) return sub[0]?._id || sub[0] || '';
+    if (typeof sub === 'object') return sub._id || '';
+    return '';
+  };
+
+  const filteredProducts = selectedSubCategory
+    ? products.filter((p) => {
+      const pSubId = getSubId(p);
+      const subObj = subCategories.find(s => s._id === pSubId);
+      return subObj?.name === selectedSubCategory;
+    })
+    : products;
+
+  // All subcategories for this category
+  const relatedSubs = subCategories.filter((sub) => {
+    const subCatId = typeof sub.category === 'object' ? (sub.category as any)?._id : sub.category;
+    return subCatId === selectedCategory;
+  });
+
+  const showArrows = relatedSubs.length + 1 > 10;
+
+  // Grouping logic: First by Subcategory, then by Pattern Type
+  const subGroups = relatedSubs.map(sub => {
+    const subProducts = filteredProducts.filter(p => getSubId(p) === sub._id);
+
+    // Group sub-products by pattern type
+    const patterns = ["نقش رفيع", "نقش عريض"];
+    const patternGroups = patterns.map(pType => ({
+      name: pType,
+      products: subProducts.filter(p => p.patternType === pType)
+    })).filter(pg => pg.products.length > 0);
+
+    const otherProducts = subProducts.filter(p => !patterns.includes(p.patternType || ''));
+
+    return {
+      sub,
+      patternGroups,
+      otherProducts,
+      hasProducts: subProducts.length > 0
+    };
+  }).filter(sg => sg.hasProducts);
+
+  // Products that are not in any of our subcategories
+  const unclassified = filteredProducts.filter(p => {
+    const pSubId = getSubId(p);
+    return !relatedSubs.find(s => s._id === pSubId);
+  });
+
+  return (
+    <>
+      {/* Sleek, Premium & Compact Header Bar */}
+      <div className="bg-[#6f1e3d] backdrop-blur-md rounded-2xl py-3 px-5 mb-6 border border-white/10 shadow-lg shadow-[#6f1e3d]/10 flex flex-col md:flex-row items-center justify-between gap-4 transition-all duration-300 overflow-hidden relative">
+        {/* Subtle Luxury Glow */}
+        <div className="absolute top-0 left-1/4 w-48 h-48 bg-white/5 blur-[80px] rounded-full pointer-events-none"></div>
+
+        {/* Title Section */}
+        <div className="flex items-center gap-4 md:gap-6 z-10">
+          <div className="text-right">
+            <h1 className="text-xl md:text-2xl font-black text-white tracking-tight mb-0.5">المنتجات</h1>
+            <div className="flex items-center justify-end gap-1.5 text-[#D4AF37]">
+              <span className="text-[11px] font-black uppercase tracking-wider">{products.length} تصميم</span>
+              <div className="w-5 h-px bg-[#D4AF37]/40"></div>
+            </div>
+          </div>
+
+          <div className="w-px h-10 bg-white/10 hidden md:block"></div>
+
+          <div className="text-right">
+            <h2 className="text-lg md:text-xl font-black text-white">{catName}</h2>
+          </div>
+        </div>
+
+        {/* Visual Subcategory Filter with Navigation Arrows */}
+        <div className="relative flex items-center z-10 w-full md:w-auto overflow-hidden bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
+          {/* Scroll Right Button */}
+          {showArrows && (
+            <button
+              onClick={() => handleScroll('right')}
+              className="flex-shrink-0 w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-[#D4AF37] hover:text-white flex items-center justify-center transition-all duration-300 ml-1 border border-white/5 cursor-pointer"
+              aria-label="Scroll Right"
+            >
+              <FaChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Scroll Container */}
+          <div
+            ref={scrollContainerRef}
+            className="flex items-center gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth p-1 w-full justify-start"
+          >
+            <button
+              onClick={() => onSubCategoryClick("")}
+              className={`flex-shrink-0 flex flex-col items-center p-1.5 rounded-xl transition-all duration-300 group ${!selectedSubCategory
+                ? 'bg-[#D4AF37] text-[#6f1e3d] shadow-md scale-105'
+                : 'hover:bg-white/5 text-white/70 hover:scale-105'
+                }`}
+            >
+              <div className={`w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center mb-1 border transition-all duration-300 ${!selectedSubCategory
+                ? 'border-[#6f1e3d] bg-white/10'
+                : 'border-white/10 bg-white/5 group-hover:border-[#D4AF37]/50'
+                }`}>
+                <svg className={`w-5 h-5 md:w-6 md:h-6 ${!selectedSubCategory ? 'text-[#6f1e3d]' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </div>
+              <span className={`text-[11px] md:text-xs font-black text-center transition-colors uppercase tracking-tight ${!selectedSubCategory ? 'text-[#6f1e3d]' : 'text-white/70'
+                }`}>الكل</span>
+            </button>
+
+            {relatedSubs.map((sub) => (
+              <button
+                key={sub._id}
+                onClick={() => onSubCategoryClick(sub.name)}
+                className={`flex-shrink-0 flex flex-col items-center p-1.5 rounded-xl transition-all duration-300 group ${selectedSubCategory === sub.name
+                  ? 'bg-[#D4AF37] text-[#6f1e3d] shadow-md scale-105'
+                  : 'hover:bg-white/5 text-white/70 hover:scale-105'
+                  }`}
+              >
+                <div className={`w-10 h-10 md:w-11 md:h-11 rounded-full overflow-hidden mb-1 border transition-all duration-300 ${selectedSubCategory === sub.name
+                  ? 'border-[#6f1e3d]'
+                  : 'border-white/10 bg-white/5 group-hover:border-[#D4AF37]/50'
+                  }`}>
+                  <img
+                    src={sub.image || "/placeholder.svg"}
+                    alt={sub.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span className={`text-[11px] md:text-xs font-black text-center transition-colors uppercase tracking-tight ${selectedSubCategory === sub.name ? 'text-[#6f1e3d]' : 'text-white/70'
+                  }`}>{sub.name}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Scroll Left Button */}
+          {showArrows && (
+            <button
+              onClick={() => handleScroll('left')}
+              className="flex-shrink-0 w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-[#D4AF37] hover:text-white flex items-center justify-center transition-all duration-300 mr-1 border border-white/5 cursor-pointer"
+              aria-label="Scroll Left"
+            >
+              <FaChevronLeft className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {filteredProducts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
+          <div className="w-20 h-20 rounded-full bg-[#6f1e3d]/5 flex items-center justify-center text-4xl">🛍️</div>
+          <h2 className="text-xl font-black text-[#6f1e3d]">لا توجد منتجات في هذا القسم حالياً</h2>
+          <p className="text-gray-400 font-medium max-w-sm leading-relaxed text-sm">
+            يمكنك اختيار قسم آخر من الأعلى لتصفح المنتجات المتوفرة.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {/* Subcategory Groups */}
+          {subGroups.map((group) => (
+            <div key={group.sub._id} className="space-y-6 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="text-center relative py-2">
+                <div className="flex items-center justify-center gap-4 mb-1">
+                  <div className="w-12 md:w-24 h-[1px] bg-gradient-to-l from-[#c5a059]/50 to-transparent"></div>
+                  <h2 className="text-2xl md:text-3xl font-black text-[#c5a059] tracking-wide">{group.sub.name}</h2>
+                  <div className="w-12 md:w-24 h-[1px] bg-gradient-to-r from-[#c5a059]/50 to-transparent"></div>
+                </div>
+                <p className="text-gray-400 text-xs font-bold tracking-widest uppercase">مجموعة تصاميم {group.sub.name}</p>
+              </div>
+
+              {/* Pattern Sections (نقش رفيع / عريض) */}
+              <div className="space-y-8 pr-1 md:pr-2">
+                {group.patternGroups.map((patternGroup) => (
+                  <div key={patternGroup.name} className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#c5a059]"></span>
+                      <h3 className="text-base font-black text-gray-800">{patternGroup.name}</h3>
+                      <span className="text-[9px] font-black bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded text-gray-500">
+                        {patternGroup.products.length}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+                      {patternGroup.products.map((product) => (
+                        <div key={product._id} onClick={() => onProductClick(product._id)} className="transition-all duration-300">
+                          <ProductCard product={product} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Other Products in Subcategory */}
+                {group.otherProducts.length > 0 && (
+                  <div className="space-y-4">
+                    {group.patternGroups.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                        <h3 className="text-base font-black text-gray-850">منتجات أخرى في {group.sub.name}</h3>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+                      {group.otherProducts.map((product) => (
+                        <div key={product._id} onClick={() => onProductClick(product._id)} className="transition-all duration-300">
+                          <ProductCard product={product} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Unclassified products */}
+      {unclassified.length > 0 && (
+        <div className="space-y-6 mt-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="text-center relative py-2">
+            <div className="flex items-center justify-center gap-4 mb-1">
+              <div className="w-12 md:w-24 h-[1px] bg-gradient-to-l from-[#6f1e3d]/45 to-transparent"></div>
+              <h2 className="text-xl md:text-2xl font-black text-[#6f1e3d]">{i18n.language === 'ar' ? 'منتجات إضافية' : 'Additional Products'}</h2>
+              <div className="w-12 md:w-24 h-[1px] bg-gradient-to-r from-[#6f1e3d]/45 to-transparent"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+            {unclassified.map((product) => (
+              <div key={product._id} onClick={() => onProductClick(product._id)} className="transition-all duration-300">
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ProductsPageContent() {
+  const { i18n } = useTranslation();
+  const [products, setProducts] = useState<ExtendedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("");
-  const [sortBy, setSortBy] = useState("");
-  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
-  const [showFilters, setShowFilters] = useState(false);
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
   const [displayedProducts, setDisplayedProducts] = useState(20);
-  const [totalResults, setTotalResults] = useState(0);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [brands, setBrands] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subCategories, setSubCategories] = useState<Subcategory[]>([]);
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  // Context
-  const { addToCart } = useCart();
-  const { isAuthenticated } = useAuth();
+  // Initialize selectedCategory from URL
+  useEffect(() => {
+    const catId = searchParams.get('category');
+    if (catId) {
+      setSelectedCategory(catId);
+    }
+  }, [searchParams]);
 
   // Fetch initial data
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-    fetchBrands();
+    fetchSubCategories();
   }, []);
 
   // Fetch products when filters change
   useEffect(() => {
     fetchProducts();
-  }, [searchQuery, selectedCategory, selectedBrand, sortBy, priceRange]);
+  }, [searchQuery, selectedCategory, selectedSubCategory]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      let externalProducts: Product[] = [];
-      let localProducts: Product[] = [];
+      let externalProducts: ExtendedProduct[] = [];
+      let localProducts: ExtendedProduct[] = [];
 
       // Read hidden product IDs set by admin dashboard
       const hiddenIds: string[] = (() => {
@@ -68,34 +351,60 @@ export default function ProductsPage() {
             ? { _id: p.brand, name: 'النزيج', image: '' }
             : p.brand,
         }));
+
+        if (selectedCategory) {
+          localProducts = localProducts.filter(p => {
+            const pCatId = typeof p.category === 'object' ? p.category?._id : p.category;
+            return pCatId === selectedCategory;
+          });
+        }
       } catch (e) {
         console.warn('Could not fetch local products');
       }
 
-      // Fetch external API products
-      try {
-        let response;
-        if (searchQuery) {
-          response = await searchProducts(searchQuery);
-        } else if (selectedCategory) {
-          response = await getProductsByCategory(selectedCategory);
-        } else {
-          response = await getProducts();
+      // Fetch external API products ONLY when no category is selected
+      if (!selectedCategory) {
+        try {
+          let response;
+          if (searchQuery) {
+            response = await searchProducts(searchQuery);
+          } else {
+            response = await getProducts();
+          }
+          externalProducts = response.data || [];
+        } catch (e) {
+          console.warn('Could not fetch external products');
         }
-        externalProducts = response.data || [];
-      } catch (e) {
-        console.warn('Could not fetch external products');
       }
 
-      // Merge: local first, then external — filter out admin-hidden products
-      const merged = localProducts;
+      // Merge: local first, then external
+      let merged = [...localProducts, ...externalProducts]
+        .filter(p => !hiddenIds.includes(p._id))
+        .filter((p, idx, arr) => arr.findIndex(x => x._id === p._id) === idx);
+
+      // Apply Subcategory Filter by Name
+      if (selectedSubCategory) {
+        merged = merged.filter((p) => {
+          const pSub = p.subcategory;
+          if (!pSub) return false;
+
+          // Get subcategory ID safely
+          let pSubId = '';
+          if (typeof pSub === 'string') pSubId = pSub;
+          else if (Array.isArray(pSub)) pSubId = pSub[0]?._id || pSub[0] || '';
+          else if (typeof pSub === 'object') pSubId = pSub._id || '';
+
+          // Find the name of this subcategory
+          const subObj = subCategories.find(s => s._id === pSubId);
+          return subObj?.name === selectedSubCategory;
+        });
+      }
+
       setProducts(merged);
-      setTotalResults(merged.length);
       setDisplayedProducts(20);
     } catch (error) {
       console.error("Error fetching products:", error);
       setProducts([]);
-      setTotalResults(0);
     } finally {
       setLoading(false);
     }
@@ -103,299 +412,151 @@ export default function ProductsPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await getCategories();
-      setCategories(response.data || []);
+      // Try to fetch from LOCAL admin API first
+      const res = await fetch('/api/admin/categories', { cache: 'no-store' });
+      if (!res.ok) throw new Error("Local API failed");
+      const data = await res.json();
+      setCategories(data.data || []);
     } catch (error) {
-      console.error("Error fetching categories:", error);
-      setCategories([]);
+      console.warn("Failed to fetch local categories, trying external API...", error);
+      try {
+        // Fallback to external API
+        const response = await getCategories();
+        setCategories(response.data || []);
+      } catch (externalError) {
+        console.error("Error fetching categories from both sources:", externalError);
+        setCategories([]);
+      }
     }
   };
 
-  const fetchBrands = async () => {
+  const fetchSubCategories = async () => {
     try {
-      const response = await getBrands();
-      setBrands(response.data || []);
+      // Try to fetch from LOCAL admin API first
+      const res = await fetch('/api/admin/subcategories', { cache: 'no-store' });
+      if (!res.ok) throw new Error("Local API failed");
+      const data = await res.json();
+      setSubCategories(data.data || []);
     } catch (error) {
-      console.error("Error fetching brands:", error);
-      setBrands([]);
+      console.warn("Failed to fetch local subcategories, trying external API...", error);
+      try {
+        // Fallback to external API
+        const response = await getSubCategories();
+        setSubCategories(response.data || []);
+      } catch (externalError) {
+        console.error("Error fetching subcategories from both sources:", externalError);
+        setSubCategories([]);
+      }
     }
   };
-
-  const handleAddToCart = async (productId: string) => {
-    if (!isAuthenticated) {
-      alert("Please login to add items to cart");
-      window.location.href = "/login";
-      return;
-    }
-    
-    try {
-      console.log('ProductsPage: handleAddToCart called', { productId });
-      await addToCart(productId);
-      console.log('ProductsPage: Product added to cart successfully');
-      // Show success notification
-      const notification = document.createElement('div');
-      notification.className = 'fixed top-4 right-4 bg-primary/80 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300';
-      notification.textContent = 'Product added to cart successfully!';
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 300);
-      }, 3000);
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      alert('Failed to add product to cart. Please try again.');
-    }
-  };
-
 
   const handleLoadMore = () => {
     setDisplayedProducts(prev => prev + 20);
   };
 
-  const clearFilters = () => {
-    setSearchQuery("");
-    setSelectedCategory("");
-    setSelectedBrand("");
-    setSortBy("");
-    setPriceRange({ min: "", max: "" });
-  };
-
   const visibleProducts = products.slice(0, displayedProducts);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#1a3a3a] mb-2">{t('home.categories')}</h1>
-          <p className="text-gray-500 font-medium">{totalResults} {i18n.language === 'ar' ? 'منتج' : 'products found'}</p>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="bg-white/80 backdrop-blur-md rounded-[2rem] shadow-[0_15px_40px_-15px_rgba(0,0,0,0.05)] p-8 mb-12 border border-gray-100">
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative group">
-                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#6f1e3d] transition-colors" />
-                <input
-                  type="text"
-                  placeholder="Search for products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#6f1e3d]/20 transition-all text-gray-700"
+    <div className="min-h-screen bg-[#fafaf9]">
+      <div className="max-w-7xl mx-auto px-3 md:px-6 py-6">
+        <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-700">
+          {/* Sleek Visual Categories Bar (Main Categories) - Maroon Theme */}
+          <div className="bg-[#6f1e3d] rounded-2xl py-2 px-4 shadow-lg shadow-[#6f1e3d]/15 border border-white/5 relative overflow-hidden">
+            {/* Subtle premium glow */}
+            <div className="absolute top-0 right-1/4 w-32 h-32 bg-white/5 blur-2xl rounded-full pointer-events-none"></div>
+            
+            <div className="flex flex-col items-center gap-1 relative z-10">
+              <div className="flex items-center gap-3 pt-1">
+                <div className="w-6 h-[1px] bg-[#D4AF37]/40 rounded-full"></div>
+                <span className="text-xs md:text-sm font-black text-white/95 uppercase tracking-widest">الأقسام التقليدية</span>
+                <div className="w-6 h-[1px] bg-[#D4AF37]/40 rounded-full"></div>
+              </div>
+              <div className="w-full">
+                <CategoriesBar
+                  selectedCategory={selectedCategory}
+                  onCategorySelect={(id) => {
+                    if (id) {
+                      setSelectedCategory(id);
+                      setSelectedSubCategory(""); // Reset sub when parent changes
+                    } else {
+                      setSelectedCategory("");
+                      setSelectedSubCategory("");
+                    }
+                  }}
                 />
               </div>
             </div>
-
-            {/* Filter Toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-3 px-6 py-4 bg-[#6f1e3d] text-white rounded-2xl hover:bg-[#8d2a4e] transition-all shadow-lg shadow-[#6f1e3d]/20 font-bold"
-            >
-              <FaFilter className="text-sm" />
-              <span>Filter & Sort</span>
-            </button>
           </div>
-
-          {/* Advanced Filters */}
-          {showFilters && (
-            <div className="mt-8 pt-8 border-t border-gray-100">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Category Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Category</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-[#6f1e3d]/20 transition-all font-medium text-gray-700 appearance-none cursor-pointer"
-                  >
-                    <option value="">All Categories</option>
-                    {categories.map((category) => (
-                      <option key={category._id} value={category._id}>{category.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Brand Filter */}
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Brand</label>
-                  <select
-                    value={selectedBrand}
-                    onChange={(e) => setSelectedBrand(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-[#6f1e3d]/20 transition-all font-medium text-gray-700 appearance-none cursor-pointer"
-                  >
-                    <option value="">All Brands</option>
-                    {brands.map((brand) => (
-                      <option key={brand._id} value={brand._id}>{brand.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Sort */}
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Sort By</label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-[#6f1e3d]/20 transition-all font-medium text-gray-700 appearance-none cursor-pointer"
-                  >
-                    <option value="">Default</option>
-                    <option value="price">Price: Low to High</option>
-                    <option value="-price">Price: High to Low</option>
-                    <option value="title">Name: A to Z</option>
-                  </select>
-                </div>
-
-                {/* Price Range */}
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Price Range</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      placeholder="Min"
-                      value={priceRange.min}
-                      onChange={(e) => setPriceRange({...priceRange, min: e.target.value})}
-                      className="w-1/2 px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-[#6f1e3d]/20"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Max"
-                      value={priceRange.max}
-                      onChange={(e) => setPriceRange({...priceRange, max: e.target.value})}
-                      className="w-1/2 px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-[#6f1e3d]/20"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8 flex justify-end">
-                <button onClick={clearFilters} className="text-sm font-bold text-gray-400 hover:text-[#6f1e3d] transition-colors underline underline-offset-4 decoration-gray-200 hover:decoration-[#6f1e3d]/30">
-                  Reset All Filters
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mb-16">
-          {loading ? (
-            Array(8).fill(0).map((_, index) => (
-              <div key={index} className="bg-white rounded-[2.5rem] shadow-sm p-6 animate-pulse">
-                <div className="bg-gray-200 h-64 rounded-[2rem] mb-6"></div>
-                <div className="bg-gray-200 h-6 rounded w-3/4 mx-auto mb-3"></div>
-                <div className="bg-gray-200 h-4 rounded w-1/2 mx-auto"></div>
-              </div>
-            ))
-          ) : (
-            visibleProducts.map((product: any) => (
-              <div
-                key={product._id}
-                className="group relative flex flex-col bg-white rounded-[2.5rem] shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] transition-all duration-500 hover:-translate-y-3 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.18)] cursor-pointer overflow-hidden border border-gray-100"
-                onClick={() => window.location.href = `/products/${product._id}`}
-              >
-                {/* Product Image */}
-                <div className="relative h-80 w-full overflow-hidden p-3 pb-0">
-                  <div className="w-full h-full rounded-[2rem] overflow-hidden relative">
-                    <img
-                      src={product.imageCover || '/placeholder.svg'}
-                      alt={i18n.language === 'ar' ? product.title : (product.titleEn || product.title)}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
-                    />
-                    {/* Overlay on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                    {/* Alnaseej Badge */}
-                    {product.isLocal && (
-                      <div className="absolute top-4 right-4 bg-[#c5a059] text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
-                        {i18n.language === 'ar' ? 'النزيج' : 'Alnaseej'}
-                      </div>
-                    )}
-
-                    {/* Discount Badge */}
-                    {product.priceAfterDiscount && (
-                      <div className="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-black px-2.5 py-1.5 rounded-full shadow-lg">
-                        -{Math.round(((product.price - product.priceAfterDiscount) / product.price) * 100)}%
-                      </div>
-                    )}
-
-                    {/* Wishlist Button */}
-                    <div className="absolute bottom-4 right-4 z-10" onClick={(e) => e.stopPropagation()}>
-                      <Heart
-                        productId={product._id}
-                        className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-md hover:bg-white transition-colors"
-                        size="md"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Product Info */}
-                <div className="p-5 text-center space-y-2.5">
-                  <h3 className="text-base font-black text-[#1a3a3a] line-clamp-2 group-hover:text-[#c5a059] transition-colors duration-300 leading-snug">
-                    {i18n.language === 'ar' ? product.title : (product.titleEn || product.title)}
-                  </h3>
-
-                  {/* Stars */}
-                  {product.ratingsAverage && (
-                    <div className="flex items-center justify-center gap-1">
-                      {[1,2,3,4,5].map(star => (
-                        <FaStar
-                          key={star}
-                          className={`text-xs ${
-                            star <= Math.round(product.ratingsAverage)
-                              ? 'text-[#c5a059]'
-                              : 'text-gray-200'
-                          }`}
-                        />
-                      ))}
-                      <span className="text-xs text-gray-400 ml-1">({product.ratingsQuantity || 0})</span>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-xl font-black text-[#1a3a3a]">
-                      {(product.priceAfterDiscount || product.price).toLocaleString()}
-                      <span className="text-xs font-bold text-gray-400 ml-1">{t('common.egp')}</span>
-                    </span>
-                    {product.priceAfterDiscount && (
-                      <span className="text-sm text-gray-400 line-through">
-                        {product.price.toLocaleString()} {t('common.egp')}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Details Button */}
-                  <div className="pt-1">
-                    <button className="w-full bg-[#1a3a3a] text-white py-3.5 px-6 rounded-2xl text-sm font-black hover:bg-[#c5a059] transition-all duration-300 shadow-lg shadow-[#1a3a3a]/10 active:scale-95">
-                      {i18n.language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
-                    </button>
-                  </div>
+        {/* Content Area */}
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 mb-16">
+            {Array(8).fill(0).map((_, index) => (
+              <div key={index} className="bg-white rounded-2xl overflow-hidden animate-pulse shadow-sm border border-gray-100">
+                <div className="bg-gray-150 h-[200px] md:h-[260px] w-full"></div>
+                <div className="p-4 space-y-3">
+                  <div className="bg-gray-150 h-2.5 rounded w-16 mx-auto"></div>
+                  <div className="bg-gray-150 h-4 rounded w-3/4 mx-auto"></div>
+                  <div className="bg-gray-150 h-3 rounded w-1/3 mx-auto"></div>
+                  <div className="bg-gray-150 h-9 rounded-xl w-full"></div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        ) : selectedCategory ? (
+          <SelectedCategoryView
+            products={products}
+            subCategories={subCategories}
+            selectedCategory={selectedCategory}
+            selectedSubCategory={selectedSubCategory}
+            categories={categories}
+            onProductClick={(id) => router.push(`/products/${id}`)}
+            onSubCategoryClick={(name) => setSelectedSubCategory(name)}
+          />
+        ) : products.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center space-y-5 bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+            <div className="w-16 h-16 rounded-full bg-[#6f1e3d]/5 flex items-center justify-center text-4xl">🔍</div>
+            <h2 className="text-xl font-black text-[#6f1e3d]">لا توجد نتائج</h2>
+            <p className="text-gray-400 text-sm font-medium">حاول البحث بكلمة مختلفة أو تصفح جميع الأقسام.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 mb-16">
+            {visibleProducts.map((product: any) => (
+              <div key={product._id} onClick={() => router.push(`/products/${product._id}`)} className="transition-all duration-300">
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Load More Button */}
-        {products.length > displayedProducts && (
-          <div className="text-center">
+        {!selectedCategory && products.length > displayedProducts && (
+          <div className="text-center mt-8">
             <button
               onClick={handleLoadMore}
-              className="bg-[#1a3a3a] hover:bg-[#c5a059] text-white px-10 py-4 rounded-2xl font-black transition-all duration-300 shadow-lg flex items-center gap-3 mx-auto"
+              className="bg-[#6f1e3d] text-white hover:bg-[#5a1832] px-8 py-3 rounded-xl font-black transition-all duration-300 shadow-md flex items-center gap-2 mx-auto text-sm"
             >
               {i18n.language === 'ar' ? 'تحميل المزيد' : 'Load More'}
-              <FaSort className="w-4 h-4" />
+              <FaSort className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  const { t } = useTranslation();
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6f1e3d]"></div>
+      </div>
+    }>
+      <ProductsPageContent />
+    </Suspense>
   );
 }
 

@@ -6,53 +6,64 @@ import {
   FaTachometerAlt, FaBox, FaShoppingBag, FaUsers, FaTags,
   FaStar, FaTimes, FaLayerGroup, FaImages, FaGlobe,
   FaPhoneAlt, FaConciergeBell, FaBars, FaStore, FaQuoteLeft,
-  FaLanguage, FaChevronDown, FaChevronRight
+  FaLanguage, FaChevronDown, FaChevronRight, FaGift
 } from "react-icons/fa";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { ElementType } from "react";
 
 interface AdminSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
 }
 
-const menuGroups = [
+const menuGroups: Array<{
+  labelKey: string;
+  items: Array<{
+    nameKey: string;
+    href: string;
+    icon: ElementType;
+    exact?: boolean;
+  }>;
+}> = [
   {
-    label: "Overview",
+    labelKey: "admin.sidebar.overview",
     items: [
-      { name: "Dashboard", href: "/admin", icon: FaTachometerAlt, exact: true },
+      { nameKey: "admin.sidebar.dashboard", href: "/admin", icon: FaTachometerAlt, exact: true },
     ]
   },
   {
-    label: "Catalog",
+    labelKey: "admin.sidebar.catalog",
     items: [
-      { name: "Products", href: "/admin/products", icon: FaBox },
-      { name: "Categories", href: "/admin/categories", icon: FaTags },
-      { name: "Subcategories", href: "/admin/subcategories", icon: FaLayerGroup },
-      { name: "Brands", href: "/admin/brands", icon: FaStar },
+      { nameKey: "admin.sidebar.products", href: "/admin/products", icon: FaBox },
+      { nameKey: "admin.sidebar.bestSellers", href: "/admin/recommended", icon: FaStar },
+      { nameKey: "admin.sidebar.categories", href: "/admin/categories", icon: FaTags },
+      { nameKey: "admin.sidebar.subcategories", href: "/admin/subcategories", icon: FaLayerGroup },
+      { nameKey: "admin.sidebar.gifts", href: "/admin/gifts", icon: FaGift },
     ]
   },
   {
-    label: "Commerce",
+    labelKey: "admin.sidebar.commerce",
     items: [
-      { name: "Orders", href: "/admin/orders", icon: FaShoppingBag },
-      { name: "Users", href: "/admin/users", icon: FaUsers },
+      { nameKey: "admin.sidebar.orders", href: "/admin/orders", icon: FaShoppingBag },
+      { nameKey: "admin.sidebar.users", href: "/admin/users", icon: FaUsers },
     ]
   },
   {
-    label: "Content",
+    labelKey: "admin.sidebar.content",
     items: [
-      { name: "Banners & Sliders", href: "/admin/banners", icon: FaImages },
-      { name: "Services", href: "/admin/services", icon: FaConciergeBell },
-      { name: "Testimonials", href: "/admin/testimonials", icon: FaQuoteLeft },
-      { name: "Contact Info", href: "/admin/contact", icon: FaPhoneAlt },
+      { nameKey: "admin.sidebar.banners", href: "/admin/banners", icon: FaImages },
+      { nameKey: "admin.sidebar.services", href: "/admin/services", icon: FaConciergeBell },
+      { nameKey: "admin.sidebar.testimonials", href: "/admin/testimonials", icon: FaQuoteLeft },
+      { nameKey: "admin.sidebar.contactInfo", href: "/admin/contact", icon: FaPhoneAlt },
     ]
   },
   {
-    label: "Settings",
+    labelKey: "admin.sidebar.settings",
     items: [
-      { name: "Navbar Manager", href: "/admin/navbar", icon: FaBars },
-      { name: "Translations", href: "/admin/translations", icon: FaLanguage },
-      { name: "Site Settings", href: "/admin/settings", icon: FaGlobe },
+      { nameKey: "admin.sidebar.navbar", href: "/admin/navbar", icon: FaBars },
+      { nameKey: "admin.sidebar.translations", href: "/admin/translations", icon: FaLanguage },
+      { nameKey: "admin.sidebar.siteSettings", href: "/admin/settings", icon: FaGlobe },
     ]
   },
 
@@ -60,6 +71,7 @@ const menuGroups = [
 
 export default function AdminSidebar({ isOpen, onToggle }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState<string[]>([]);
 
   const toggleGroup = (label: string) => {
@@ -101,7 +113,7 @@ export default function AdminSidebar({ isOpen, onToggle }: AdminSidebarProps) {
               <FaStore className="text-[#0f1623] text-sm" />
             </div>
             <div>
-              <p className="text-white font-black text-sm tracking-tight">النزيج</p>
+              <p className="text-white font-black text-sm tracking-tight">Alnaseej</p>
               <p className="text-[#c5a059] text-[10px] font-bold uppercase tracking-widest">Admin Panel</p>
             </div>
           </Link>
@@ -113,18 +125,17 @@ export default function AdminSidebar({ isOpen, onToggle }: AdminSidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1 scrollbar-thin">
           {menuGroups.map((group) => {
-            const isCollapsed = collapsed.includes(group.label);
-            const hasActiveItem = group.items.some(item => isActive(item.href, (item as any).exact));
+            const isCollapsed = collapsed.includes(group.labelKey);
 
             return (
-              <div key={group.label} className="mb-1">
+              <div key={group.labelKey} className="mb-1">
                 {/* Group Label */}
                 <button
-                  onClick={() => toggleGroup(group.label)}
+                  onClick={() => toggleGroup(group.labelKey)}
                   className="w-full flex items-center justify-between px-3 py-2 mb-1 group"
                 >
                   <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 group-hover:text-gray-400 transition-colors">
-                    {group.label}
+                    {t(group.labelKey)}
                   </span>
                   {isCollapsed
                     ? <FaChevronRight className="text-gray-600 text-[9px]" />
@@ -136,11 +147,11 @@ export default function AdminSidebar({ isOpen, onToggle }: AdminSidebarProps) {
                 {!isCollapsed && (
                   <div className="space-y-0.5">
                     {group.items.map((item) => {
-                      const active = isActive(item.href, (item as any).exact);
+                      const active = isActive(item.href, item.exact);
                       const Icon = item.icon;
                       return (
                         <Link
-                          key={item.name}
+                          key={item.nameKey}
                           href={item.href}
                           onClick={() => { if (window.innerWidth < 1024) onToggle(); }}
                           className={`
@@ -152,7 +163,7 @@ export default function AdminSidebar({ isOpen, onToggle }: AdminSidebarProps) {
                           `}
                         >
                           <Icon className={`w-4 h-4 flex-shrink-0 ${active ? "text-[#c5a059]" : ""}`} />
-                          <span>{item.name}</span>
+                          <span>{t(item.nameKey)}</span>
                           {active && <div className="ml-auto w-1.5 h-1.5 bg-[#c5a059] rounded-full" />}
                         </Link>
                       );
@@ -172,7 +183,7 @@ export default function AdminSidebar({ isOpen, onToggle }: AdminSidebarProps) {
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all"
           >
             <FaStore className="w-4 h-4" />
-            <span>View Live Store</span>
+            <span>{t('admin.viewStore')}</span>
           </Link>
         </div>
       </aside>

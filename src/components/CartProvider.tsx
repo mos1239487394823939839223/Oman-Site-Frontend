@@ -28,30 +28,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
     let loadingTimeout: NodeJS.Timeout | undefined;
     
     try {
-      if (loading) {
-        console.log('CartProvider: refreshCart already in progress, skipping');
-        return;
-      }
+      if (loading) return;
       
-      console.log('CartProvider: Starting refreshCart');
+
       setLoading(true);
       
       loadingTimeout = setTimeout(() => {
-        console.log('CartProvider: Loading timeout reached, setting loading to false');
+
         setLoading(false);
       }, 5000);
       
       const token = localStorage.getItem('token');
       const user = localStorage.getItem('user');
       
-      console.log('CartProvider: refreshCart called', {
-        hasToken: !!token,
-        hasUser: !!user,
-        tokenLength: token?.length || 0
-      });
+
       
       const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
-      console.log('CartProvider: Setting cart items from localStorage:', cartData);
+
       
       setCartItems([...cartData]);
       setCartCount(cartData.length);
@@ -59,7 +52,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       
       window.dispatchEvent(new CustomEvent('cartUpdated'));
       
-      console.log('CartProvider: Cart state updated from localStorage, new count:', cartData.length);
+
       
       /* Disabling external API sync for local products
       if (token && user && token.length > 10) {
@@ -75,7 +68,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error refreshing cart:', error);
     } finally {
-      console.log('CartProvider: Finished refreshCart');
+
       if (loadingTimeout) {
         clearTimeout(loadingTimeout);
       }
@@ -84,7 +77,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    console.log('CartProvider: Component mounted, calling refreshCart');
+
     refreshCart().catch(error => {
       console.error('CartProvider: Error in initial refresh:', error);
     });
@@ -93,7 +86,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'cart' && e.newValue !== null) {
-        console.log('CartProvider: localStorage cart changed, refreshing');
+
         const cartData = JSON.parse(e.newValue);
         setCartItems([...cartData]);
         setCartCount(cartData.length);
@@ -104,7 +97,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     const handleCustomStorageChange = () => {
-      console.log('CartProvider: Custom storage event triggered');
+
       const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
       setCartItems([...cartData]);
       setCartCount(cartData.length);
@@ -125,15 +118,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addToCart = async (productId: string, quantity: number = 1) => {
     try {
       // Prevent multiple simultaneous calls
-      if (loading) {
-        console.log('CartProvider: addToCart already in progress, skipping');
-        return;
-      }
+      if (loading) return;
       
       setLoading(true);
       
       const token = localStorage.getItem('token');
-      console.log('CartProvider: addToCart called', { productId, quantity, hasToken: !!token });
+
       
       // Always update localStorage first for immediate UI feedback
       const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -166,15 +156,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       
       localStorage.setItem('cart', JSON.stringify(cartData));
-      console.log('CartProvider: Updated localStorage cart:', cartData);
       
-      // Update state immediately
-      console.log('CartProvider: Updating state with cartData:', cartData);
-      setCartItems([...cartData]); // Create new array to trigger re-render
+      setCartItems([...cartData]);
       setCartCount(cartData.length);
       setCartTotal(cartData.reduce((sum: number, item: any) => sum + (item.price * item.count), 0));
-      console.log('CartProvider: State updated - cartItems:', cartData, 'cartCount:', cartData.length);
-      
+
       // Dispatch custom event to notify other components
       window.dispatchEvent(new CustomEvent('cartUpdated'));
       

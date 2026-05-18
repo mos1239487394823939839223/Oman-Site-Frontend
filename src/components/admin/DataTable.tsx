@@ -57,27 +57,27 @@ export default function DataTable<T extends { _id?: string }>({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-[#5C2E3A]/5 border-b-2 border-[#5C2E3A]/10">
               {columns.map((column, index) => (
                 <th
                   key={index}
                   className={`
-                    px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider
-                    ${column.sortable && onSort ? "cursor-pointer hover:bg-gray-100" : ""}
+                    px-5 py-4 text-right text-xs font-black text-[#5C2E3A] uppercase tracking-wider
+                    ${column.sortable && onSort ? "cursor-pointer hover:bg-[#5C2E3A]/10 transition-colors" : ""}
                     ${column.className || ""}
                   `}
                   onClick={() => column.sortable && onSort && onSort(String(column.header))}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-1.5 justify-end">
                     {column.header}
                     {column.sortable && onSort && (
-                      <span className="ml-1">
+                      <span>
                         {getSortIcon(String(column.header)) || (
-                          <FaSort className="w-3 h-3 text-gray-400" />
+                          <FaSort className="w-3 h-3 text-[#5C2E3A]/40" />
                         )}
                       </span>
                     )}
@@ -86,24 +86,28 @@ export default function DataTable<T extends { _id?: string }>({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody>
             {data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={columns.length} className="px-6 py-16 text-center text-gray-400 font-medium">
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              data.map((row) => (
+              data.map((row, rowIdx) => (
                 <tr
                   key={row._id || JSON.stringify(row)}
                   onClick={() => onRowClick?.(row)}
-                  className={onRowClick ? "cursor-pointer hover:bg-gray-50" : ""}
+                  className={`
+                    border-b border-gray-50 transition-colors
+                    ${rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'}
+                    ${onRowClick ? 'cursor-pointer hover:bg-[#5C2E3A]/5' : 'hover:bg-gray-50'}
+                  `}
                 >
                   {columns.map((column, index) => (
                     <td
                       key={index}
-                      className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${column.className || ""}`}
+                      className={`px-5 py-5 text-sm text-gray-800 ${column.className || ""}`}
                     >
                       {renderCell(column, row)}
                     </td>

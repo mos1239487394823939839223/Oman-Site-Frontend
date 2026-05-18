@@ -1,21 +1,21 @@
 "use client";
 
 import DataTable, { Column } from "./DataTable";
-import { FaEye, FaCheckCircle, FaTimesCircle, FaClock } from "react-icons/fa";
+import { FaEye, FaCheckCircle, FaTimesCircle, FaClock, FaTruck, FaWarehouse, FaCreditCard, FaMoneyBillWave } from "react-icons/fa";
 
 interface Order {
   _id: string;
-  user?: {
-    name: string;
-    email: string;
-  };
+  user?: { name: string; email: string; };
   totalOrderPrice: number;
   orderStatus: string;
   createdAt: string;
   paymentMethod?: string;
+  deliveryMethod?: string;
   shippingAddress?: {
-    details: string;
-    city: string;
+    details?: string;
+    city?: string;
+    phone?: string;
+    name?: string;
   };
 }
 
@@ -27,129 +27,130 @@ interface OrdersTableProps {
 }
 
 const getStatusBadge = (status: string) => {
-  const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
-    delivered: {
-      color: "bg-primary/10 text-green-800",
-      icon: <FaCheckCircle className="w-4 h-4" />,
-    },
-    completed: {
-      color: "bg-primary/10 text-green-800",
-      icon: <FaCheckCircle className="w-4 h-4" />,
-    },
-    pending: {
-      color: "bg-yellow-100 text-yellow-800",
-      icon: <FaClock className="w-4 h-4" />,
-    },
-    cancelled: {
-      color: "bg-red-100 text-red-800",
-      icon: <FaTimesCircle className="w-4 h-4" />,
-    },
+  const map: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+    delivered:  { color: "bg-green-100 text-green-800",  icon: <FaCheckCircle />, label: "تم التسليم" },
+    completed:  { color: "bg-green-100 text-green-800",  icon: <FaCheckCircle />, label: "مكتمل" },
+    pending:    { color: "bg-yellow-100 text-yellow-800", icon: <FaClock />,       label: "قيد الانتظار" },
+    cancelled:  { color: "bg-red-100 text-red-800",      icon: <FaTimesCircle />, label: "ملغي" },
+    processing: { color: "bg-blue-100 text-blue-800",    icon: <FaClock />,       label: "جاري التجهيز" },
   };
-
-  const config = statusConfig[status.toLowerCase()] || {
-    color: "bg-gray-100 text-gray-800",
-    icon: <FaClock className="w-4 h-4" />,
-  };
-
+  const cfg = map[status?.toLowerCase()] || { color: "bg-gray-100 text-gray-700", icon: <FaClock />, label: status };
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-      {config.icon}
-      {status}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${cfg.color}`}>
+      {cfg.icon} {cfg.label}
     </span>
   );
 };
 
-export default function OrdersTable({
-  orders,
-  loading = false,
-  onView,
-  onStatusUpdate,
-}: OrdersTableProps) {
+const getDeliveryBadge = (method?: string, address?: Order["shippingAddress"]) => {
+  const isPickup = method === "pickup" || (!address?.city && !address?.details);
+  return isPickup ? (
+    <div className="flex flex-col gap-1 items-start">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-100 text-purple-800 w-fit">
+        <FaWarehouse /> استلام من المصنع
+      </span>
+      <div className="flex flex-col text-right">
+        {address?.name && <span className="text-xs font-bold text-gray-700">{address.name}</span>}
+        {address?.phone && <span className="text-[10px] text-gray-400 font-mono">{address.phone}</span>}
+      </div>
+    </div>
+  ) : (
+    <div className="flex flex-col gap-1 items-start">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-sky-100 text-sky-800 w-fit">
+        <FaTruck /> توصيل للمنزل
+      </span>
+      <div className="flex flex-col text-right">
+        {address?.city && <span className="text-xs font-bold text-gray-700">{address.city}</span>}
+        {address?.details && <span className="text-[10px] text-gray-400 truncate max-w-[150px]">{address.details}</span>}
+      </div>
+    </div>
+  );
+};
+
+const getPaymentBadge = (method?: string) => {
+  const isCard = method === "card" || method === "online";
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${isCard ? "bg-indigo-100 text-indigo-800" : "bg-orange-100 text-orange-800"}`}>
+      {isCard ? <FaCreditCard className="text-[10px]" /> : <FaMoneyBillWave className="text-[10px]" />}
+      {isCard ? "بطاقة بنكية" : "عند الاستلام"}
+    </span>
+  );
+};
+
+export default function OrdersTable({ orders, loading = false, onView, onStatusUpdate }: OrdersTableProps) {
   const columns: Column<Order>[] = [
     {
-      header: "Order ID",
+      header: "رقم الطلب",
       accessor: (row) => (
-        <span className="font-medium text-gray-900">#{row._id.slice(-8)}</span>
+        <span className="font-bold text-gray-800 font-mono text-sm">#{row._id.slice(-8).toUpperCase()}</span>
       ),
       sortable: true,
     },
     {
-      header: "Customer",
+      header: "العميل",
       accessor: (row) => (
         <div>
-          <div className="font-medium text-gray-900">
-            {row.user?.name || "Guest"}
-          </div>
-          <div className="text-xs text-gray-500">{row.user?.email || ""}</div>
+          <div className="font-bold text-gray-900 text-sm">{row.user?.name || "زبون"}</div>
+          <div className="text-xs text-gray-400">{row.user?.email || ""}</div>
         </div>
       ),
     },
     {
-      header: "Amount",
+      header: "طريقة الاستلام",
+      accessor: (row) => getDeliveryBadge(row.deliveryMethod, row.shippingAddress),
+    },
+    {
+      header: "طريقة الدفع",
+      accessor: (row) => getPaymentBadge(row.paymentMethod),
+    },
+    {
+      header: "المبلغ",
       accessor: (row) => (
-        <span className="font-medium text-gray-900">
-          ${row.totalOrderPrice?.toFixed(2) || "0.00"}
-        </span>
+        <div>
+          <span className="font-black text-[#5C2E3A] text-base">{row.totalOrderPrice?.toFixed(3)}</span>
+          <span className="text-xs text-gray-400 mr-1">ر.ع</span>
+        </div>
       ),
       sortable: true,
     },
     {
-      header: "Status",
+      header: "الحالة",
       accessor: (row) => getStatusBadge(row.orderStatus),
       sortable: true,
     },
     {
-      header: "Payment",
-      accessor: (row) => (
-        <span className="text-sm text-gray-600 capitalize">
-          {row.paymentMethod || "N/A"}
-        </span>
-      ),
-    },
-    {
-      header: "Date",
+      header: "التاريخ",
       accessor: (row) => (
         <div>
-          <div className="text-sm text-gray-900">
-            {new Date(row.createdAt).toLocaleDateString()}
-          </div>
-          <div className="text-xs text-gray-500">
-            {new Date(row.createdAt).toLocaleTimeString()}
-          </div>
+          <div className="text-sm text-gray-800 font-medium">{new Date(row.createdAt).toLocaleDateString("ar-OM")}</div>
+          <div className="text-xs text-gray-400">{new Date(row.createdAt).toLocaleTimeString("ar-OM")}</div>
         </div>
       ),
       sortable: true,
     },
     {
-      header: "Actions",
+      header: "الإجراءات",
       accessor: (row) => (
         <div className="flex items-center gap-2">
           {onView && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onView(row);
-              }}
-              className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1"
+              onClick={(e) => { e.stopPropagation(); onView(row); }}
+              className="px-3 py-1.5 text-xs font-bold text-white bg-[#5C2E3A] hover:bg-[#4A2330] rounded-lg transition-colors flex items-center gap-1.5"
             >
-              <FaEye className="w-4 h-4" />
-              View
+              <FaEye /> عرض
             </button>
           )}
           {onStatusUpdate && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onStatusUpdate(row);
-              }}
-              className="px-3 py-1 text-sm text-primary hover:bg-primary/5 rounded-lg transition-colors"
+              onClick={(e) => { e.stopPropagation(); onStatusUpdate(row); }}
+              className="px-3 py-1.5 text-xs font-bold text-[#5C2E3A] border border-[#5C2E3A]/30 hover:bg-[#5C2E3A]/5 rounded-lg transition-colors"
             >
-              Update
+              تحديث
             </button>
           )}
         </div>
       ),
-      className: "w-32",
+      className: "w-36",
     },
   ];
 
@@ -158,8 +159,7 @@ export default function OrdersTable({
       data={orders}
       columns={columns}
       loading={loading}
-      emptyMessage="No orders found"
+      emptyMessage="لا توجد طلبات"
     />
   );
 }
-

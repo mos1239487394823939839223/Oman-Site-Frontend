@@ -1,300 +1,378 @@
 "use client";
-
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { FaTrashAlt, FaPlus, FaMinus, FaLock, FaCreditCard, FaMapMarkerAlt, FaPhoneAlt, FaCity, FaArrowLeft, FaShoppingCart } from "react-icons/fa";
+import { useState } from "react";
+import { FaTrashAlt, FaPlus, FaMinus, FaArrowLeft, FaShoppingCart, FaCity, FaPhoneAlt, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaTruck, FaBoxOpen, FaGift, FaShieldAlt, FaCheck, FaCheckCircle, FaHome } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
+import { createCashOrder, getCart } from "@/services/clientApi";
+import { useLanguage } from "@/components/LanguageProvider";
+
+type Step = 'cart' | 'checkout' | 'success';
 
 export default function CartPage() {
-  const { cartItems, cartTotal, updateCartItem, removeFromCart, clearCart, loading, refreshCart } = useCart();
+  const { cartItems, cartTotal, updateCartItem, removeFromCart, clearCart, loading } = useCart();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
-  
-  const [shippingAddress, setShippingAddress] = useState({
-    details: "",
-    phone: "",
-    city: "",
-    postalCode: "12345"
-  });
+  const { dir, isArabic } = useLanguage();
 
-  const handleUpdateQuantity = async (productId: string, newQuantity: number) => {
-    if (newQuantity <= 0) return;
+  const [step, setStep] = useState<Step>('cart');
+  const [savedTotal, setSavedTotal] = useState(0);
+  const [shippingAddress, setShippingAddress] = useState({ details: "", phone: "", city: "", postalCode: "", name: "" });
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('cash');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [needsWrapping, setNeedsWrapping] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
+  const [orderRef] = useState(`OMN-${Date.now().toString().slice(-6)}`);
+
+  const shippingFee = deliveryMethod === 'delivery' ? 2 : 0;
+  const wrappingFee = needsWrapping ? 5 : 0;
+  const taxAmount = cartTotal * 0.05;
+  const finalTotal = cartTotal + shippingFee + taxAmount + wrappingFee;
+
+  const handleUpdateQuantity = async (id: string, qty: number) => {
+    if (qty <= 0) return;
+    try { await updateCartItem(id, qty); } catch {}
+  };
+  const handleRemove = async (id: string) => { try { await removeFromCart(id); } catch {} };
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setShippingAddress(p => ({ ...p, [e.target.name]: e.target.value }));
+  };
+
+  const saveOrderLocally = async (orderData: object) => {
     try {
-      await updateCartItem(productId, newQuantity);
-    } catch (error) {
-      console.error('Error updating cart:', error);
-    }
+      await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+    } catch {}
   };
 
-  const handleRemoveFromCart = async (productId: string) => {
+  const handleConfirmOrder = async () => {
+    if (!isAuthenticated) { alert(t('cart.loginRequired')); router.push('/login'); return; }
+    if (deliveryMethod === 'delivery' && (!shippingAddress.city || !shippingAddress.phone || !shippingAddress.details)) {
+      alert(t('cart.shippingAndPayment')); return;
+    }
+    if (deliveryMethod === 'pickup' && (!shippingAddress.name || !shippingAddress.phone)) {
+      alert(t('cart.shippingAndPayment')); return;
+    }
+    setCheckoutLoading(true);
     try {
-      await removeFromCart(productId);
-    } catch (error) {
-      console.error('Error removing from cart:', error);
-    }
+      const token = localStorage.getItem('token');
+      if (!token) { router.push('/login'); return; }
+
+      const orderPayload = {
+        _id: `LOCAL-${Date.now()}`,
+        user: { name: shippingAddress.name || "عميل", email: "" },
+        totalOrderPrice: finalTotal,
+        orderStatus: "pending",
+        paymentMethod,
+        deliveryMethod,
+        shippingAddress,
+        cartItems,
+        createdAt: new Date().toISOString(),
+      };
+
+      if (token.startsWith('local_admin_token_')) {
+        await saveOrderLocally(orderPayload);
+        setSavedTotal(finalTotal);
+        await clearCart(); setStep('success'); return;
+      }
+
+      let cartId: string | undefined;
+      try { cartId = (await getCart(token)).data?._id; } catch {}
+
+      if (!cartId || paymentMethod === 'cash') {
+        if (cartId) {
+          try {
+            const res = await createCashOrder(cartId, { shippingAddress }, token);
+            if (res?.data?._id) orderPayload._id = res.data._id;
+          } catch {}
+        }
+        await saveOrderLocally(orderPayload);
+        setSavedTotal(finalTotal);
+        await clearCart(); setStep('success'); return;
+      }
+
+      // Card payment
+      await saveOrderLocally(orderPayload);
+      setSavedTotal(finalTotal);
+      await clearCart(); setStep('success');
+    } catch (e: any) {
+      alert(e.message || t('common.retry'));
+    } finally { setCheckoutLoading(false); }
   };
 
-  const handleCheckout = (paymentType: 'stripe' | 'visa') => {
-    if (!isAuthenticated) {
-      alert("Please login to proceed to checkout");
-      router.push('/login');
-      return;
-    }
-    
-    if (!shippingAddress.details || !shippingAddress.phone || !shippingAddress.city) {
-      alert("Please fill in all required shipping address fields.");
-      return;
-    }
-    
-    const params = new URLSearchParams(shippingAddress);
-    const path = paymentType === 'stripe' ? '/payment' : '/payment/visa';
-    router.push(`${path}?${params.toString()}`);
-  };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setShippingAddress((prev) => ({ ...prev, [name]: value }));
-  };
-
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a202c] mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Preparing your cart...</p>
-        </div>
+  if (authLoading || loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8F7F5]">
+      <div className="text-center">
+        <div className="w-14 h-14 border-4 border-[#5C2E3A]/20 border-t-[#5C2E3A] rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-[#5C2E3A] font-bold">{t('common.loading')}</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (cartItems.length === 0) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-4">
-        <div className="max-w-md w-full text-center py-20">
-          <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
-            <FaShoppingCart className="text-gray-300 text-4xl" />
-          </div>
-          <h2 className="text-3xl font-black text-[#1a202c] mb-4">Your cart is empty</h2>
-          <p className="text-gray-500 mb-10 leading-relaxed">
-            Looks like you haven't added anything to your cart yet. Explore our Omani traditional collection and find something special.
-          </p>
-          <button
-            onClick={() => router.push('/products')}
-            className="inline-flex items-center gap-3 bg-[#1a202c] hover:bg-[#c5a059] text-white font-bold py-4 px-10 rounded-xl transition-all duration-300 transform hover:-translate-y-1 shadow-lg shadow-[#1a202c]/20"
-          >
-            <FaArrowLeft className="text-sm" />
-            Start Shopping
-          </button>
+  // ── SUCCESS SCREEN ──────────────────────────────────────────────
+  if (step === 'success') return (
+    <div className="min-h-screen bg-[#F8F7F5] flex items-center justify-center px-4" dir={dir}>
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center">
+        <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <FaCheckCircle className="text-green-500 text-5xl" />
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#fcfcfc] pb-24 pt-12">
-      <div className="max-w-[1400px] mx-auto px-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-          <div className="space-y-2">
-            <h1 className="text-4xl md:text-5xl font-black text-[#1a202c] tracking-tight">Shopping Bag</h1>
-            <p className="text-gray-500 font-medium">You have {cartItems.length} items in your bag</p>
-          </div>
-          <button
-            onClick={() => { if(confirm('Clear all items?')) clearCart() }}
-            className="text-red-500 hover:text-red-700 font-bold text-sm flex items-center gap-2 transition-colors border-b border-transparent hover:border-red-200 pb-1"
-          >
-            <FaTrashAlt size={14} /> Clear entire bag
-          </button>
+        <h2 className="text-2xl font-black text-[#1F2937] mb-2">{t('cart.orderConfirmed')}</h2>
+        <p className="text-gray-500 mb-2">{t('home.heroSubtitle')}</p>
+        <div className="bg-[#5C2E3A]/5 rounded-2xl px-6 py-4 mb-8">
+          <p className="text-xs text-gray-400 mb-1">{t('cart.orderRef')}</p>
+          <p className="text-xl font-black text-[#5C2E3A]">{orderRef}</p>
+          <p className="text-sm text-gray-500 mt-2">{t('cart.total')}: <span className="font-black text-[#D4AF37]">{savedTotal.toFixed(3)} {t('common.egp')}</span></p>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          {/* Left Column: Product List */}
-          <div className="lg:col-span-8 space-y-6">
-            {cartItems.map((item) => (
-              <div 
-                key={item.product._id} 
-                className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-50 flex flex-col sm:flex-row gap-8 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] group"
-              >
-                <div className="w-full sm:w-48 h-56 rounded-xl overflow-hidden bg-gray-50 relative shrink-0">
-                  <img
-                    src={item.product.imageCover}
-                    alt={item.product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                </div>
-                
-                <div className="flex-1 flex flex-col py-2">
-                  <div className="flex justify-between items-start gap-4 mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-[#1a202c] mb-2 group-hover:text-[#c5a059] transition-colors leading-snug">
-                        {item.product.title}
-                      </h3>
-                      <p className="text-gray-400 text-sm line-clamp-2 leading-relaxed">
-                        {item.product.description}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveFromCart(item.product._id)}
-                      className="text-gray-300 hover:text-red-500 p-2 transition-all duration-300 hover:bg-red-50 rounded-lg"
-                    >
-                      <FaTrashAlt size={18} />
-                    </button>
-                  </div>
-
-                  <div className="mt-auto flex flex-wrap items-center justify-between gap-6">
-                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1">
-                      <button
-                        onClick={() => handleUpdateQuantity(item.product._id, item.count - 1)}
-                        className="w-10 h-10 flex items-center justify-center hover:bg-white rounded-lg transition-colors text-[#1a202c]"
-                        disabled={item.count <= 1}
-                      >
-                        <FaMinus size={12} />
-                      </button>
-                      <span className="w-12 text-center font-black text-[#1a202c]">{item.count}</span>
-                      <button
-                        onClick={() => handleUpdateQuantity(item.product._id, item.count + 1)}
-                        className="w-10 h-10 flex items-center justify-center hover:bg-white rounded-lg transition-colors text-[#1a202c]"
-                      >
-                        <FaPlus size={12} />
-                      </button>
-                    </div>
-                    
-                    <div className="text-right">
-                      <p className="text-sm text-gray-400 font-medium mb-1">Item Total</p>
-                      <p className="text-2xl font-black text-[#1a202c]">
-                        {item.price.toLocaleString()} <span className="text-xs font-bold text-gray-400 ml-1">EGP</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Right Column: Order Summary & Form */}
-          <div className="lg:col-span-4 space-y-8 sticky top-12">
-            <div className="bg-white rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-50">
-              <h2 className="text-2xl font-black text-[#1a202c] mb-8 flex items-center gap-3">
-                Order Summary
-              </h2>
-
-              {/* Shipping Form */}
-              <div className="space-y-6 mb-10">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#4A5568]">
-                    <FaCity />
-                  </div>
-                  <input
-                    type="text"
-                    id="city"
-                    name="city"
-                    value={shippingAddress.city}
-                    onChange={handleInputChange}
-                    className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:bg-white focus:border-[#c5a059] focus:ring-4 focus:ring-[#c5a059]/10 outline-none transition-all text-sm font-bold text-[#1a202c] placeholder:text-[#4A5568] shadow-sm"
-                    placeholder="City / Region"
-                  />
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#4A5568]">
-                    <FaPhoneAlt />
-                  </div>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={shippingAddress.phone}
-                    onChange={handleInputChange}
-                    className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:bg-white focus:border-[#c5a059] focus:ring-4 focus:ring-[#c5a059]/10 outline-none transition-all text-sm font-bold text-[#1a202c] placeholder:text-[#4A5568] shadow-sm"
-                    placeholder="Phone Number"
-                  />
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#4A5568]">
-                    <FaMapMarkerAlt />
-                  </div>
-                  <input
-                    type="text"
-                    id="details"
-                    name="details"
-                    value={shippingAddress.details}
-                    onChange={handleInputChange}
-                    className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:bg-white focus:border-[#c5a059] focus:ring-4 focus:ring-[#c5a059]/10 outline-none transition-all text-sm font-bold text-[#1a202c] placeholder:text-[#4A5568] shadow-sm"
-                    placeholder="Full Address Details"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4 pt-6 border-t border-gray-100">
-                <div className="flex justify-between text-gray-500 font-medium">
-                  <span>Bag Subtotal</span>
-                  <span className="text-[#1a202c]">{cartTotal.toLocaleString()} EGP</span>
-                </div>
-                <div className="flex justify-between text-gray-500 font-medium">
-                  <span>Standard Shipping</span>
-                  <span className="text-green-600 font-bold">Calculated at next step</span>
-                </div>
-                <div className="flex justify-between items-center pt-4">
-                  <span className="text-xl font-black text-[#1a202c]">Total Amount</span>
-                  <div className="text-right">
-                    <span className="text-3xl font-black text-[#c5a059]">{cartTotal.toLocaleString()}</span>
-                    <span className="text-xs font-bold text-gray-400 ml-1 uppercase">EGP</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4 mt-10">
-                <button
-                  onClick={() => handleCheckout('stripe')}
-                  className="w-full bg-[#1a202c] hover:bg-[#2d3748] text-white font-black py-5 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 shadow-xl shadow-[#1a202c]/20 hover:scale-[1.02] active:scale-95"
-                >
-                  <FaLock size={14} className="opacity-50" />
-                  Proceed with Stripe
-                </button>
-                
-                <button
-                  onClick={() => handleCheckout('visa')}
-                  className="w-full bg-white border-2 border-[#1a202c] text-[#1a202c] hover:bg-[#1a202c] hover:text-white font-black py-5 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95"
-                >
-                  <FaCreditCard size={14} />
-                  Pay with Credit Card
-                </button>
-              </div>
-
-              <div className="mt-8 flex items-center justify-center gap-2 text-gray-400 text-xs font-medium uppercase tracking-wider">
-                <FaLock size={10} /> Secure checkout guaranteed
-              </div>
-            </div>
-            
-            {/* Trust Badges */}
-            <div className="grid grid-cols-3 gap-4 px-4">
-               <div className="text-center space-y-2">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-400">
-                    <FaCity size={14} />
-                  </div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Omani Craft</p>
-               </div>
-               <div className="text-center space-y-2">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-400">
-                    <FaMapMarkerAlt size={14} />
-                  </div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Fast Delivery</p>
-               </div>
-               <div className="text-center space-y-2">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-400">
-                    <FaPhoneAlt size={14} />
-                  </div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">24/7 Support</p>
-               </div>
-            </div>
-          </div>
+        <div className="space-y-3">
+          <button onClick={() => router.push('/products')} className="w-full h-12 bg-[#5C2E3A] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#4A2330] transition-all">
+            <FaHome /> {t('home.browseAllProducts')}
+          </button>
+          <button onClick={() => router.push('/')} className="w-full h-12 border border-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-50 transition-all">
+            {t('common.back')}
+          </button>
         </div>
       </div>
     </div>
   );
+
+  // ── EMPTY CART ──────────────────────────────────────────────────
+  if (step === 'cart' && cartItems.length === 0) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8F7F5] px-4" dir={dir}>
+      <div className="max-w-md text-center py-20">
+        <div className="w-28 h-28 bg-gradient-to-br from-[#5C2E3A]/10 to-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+          <FaShoppingCart className="text-[#5C2E3A] text-5xl" />
+        </div>
+        <h2 className="text-3xl font-black text-[#1F2937] mb-3">{t('cart.emptyTitle')}</h2>
+        <p className="text-gray-500 mb-10 leading-loose">{t('cart.emptyDescription')}</p>
+        <button onClick={() => router.push('/products')} className="inline-flex items-center gap-3 bg-[#5C2E3A] text-white font-bold h-14 px-10 rounded-2xl hover:bg-[#4A2330] transition-all shadow-lg">
+          <FaArrowLeft /> {t('cart.startShopping')}
+        </button>
+      </div>
+    </div>
+  );
+
+  const sel = (active: boolean) => `flex items-center gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer ${active ? 'border-[#5C2E3A] bg-[#5C2E3A]/15 shadow-md' : 'border-gray-200 bg-gray-50 hover:border-[#5C2E3A]/40 hover:bg-white'}`;
+  const iconBox = (active: boolean) => `w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${active ? 'bg-[#5C2E3A] text-white shadow-md' : 'bg-gray-200 text-gray-600'}`;
+  const inputCls = "h-14 w-full rounded-xl border border-gray-200 bg-white px-4 font-medium text-[#1F2937] focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition-all placeholder:text-gray-400";
+
+  const steps = ['cart', 'checkout', 'success'];
+  const currentIdx = steps.indexOf(step);
+  const stepLabels = [t('cart.title'), t('cart.shippingAndPayment'), t('cart.orderConfirmed')];
+
+  return (
+    <div className="min-h-screen bg-[#F8F7F5] pb-20" dir={dir}>
+
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <button onClick={() => step === 'checkout' ? setStep('cart') : router.back()} className="flex items-center gap-2 text-[#5C2E3A] font-bold hover:opacity-70 transition-opacity text-sm">
+            <FaArrowLeft /><span>{t('common.back')}</span>
+          </button>
+          <h1 className="text-lg font-black text-[#1F2937]">{step === 'cart' ? t('cart.title') : t('cart.checkout')}</h1>
+          <div className="flex items-center gap-2 bg-[#5C2E3A]/10 text-[#5C2E3A] rounded-full px-3 py-1">
+            <FaShoppingCart className="text-xs" /><span className="text-xs font-black">{cartItems.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-center gap-0 max-w-xs mx-auto">
+            {stepLabels.map((label, i) => (
+              <div key={i} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-black border-2 transition-all ${i <= currentIdx ? 'bg-[#5C2E3A] border-[#5C2E3A] text-white shadow-md' : 'bg-white border-gray-200 text-gray-400'}`}>
+                    {i < currentIdx ? <FaCheck className="text-xs" /> : i + 1}
+                  </div>
+                  <span className={`mt-1 text-[10px] font-bold ${i <= currentIdx ? 'text-[#5C2E3A]' : 'text-gray-400'}`}>{label}</span>
+                </div>
+                {i < 2 && <div className={`w-12 h-0.5 mx-1 mb-4 ${i < currentIdx ? 'bg-[#5C2E3A]' : 'bg-gray-200'}`} />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 pt-6 space-y-5">
+
+        {/* ── STEP: CART ── */}
+        {step === 'cart' && (
+          <>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#5C2E3A] text-white flex items-center justify-center text-xs font-black">01</div>
+                <h2 className="text-lg font-black text-[#1F2937]">{t('cart.title')}</h2>
+              </div>
+              <button onClick={() => { if (confirm(t('cart.clearCart') + '?')) clearCart(); }} className="text-xs font-bold text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
+                <FaTrashAlt size={10} /> {t('cart.clearCart')}
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {cartItems.map(item => (
+                <div key={item.product._id} className="bg-white rounded-2xl border border-gray-200 p-4 flex gap-4 items-center shadow-sm hover:shadow-md transition-shadow">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100">
+                    <img src={item.product.imageCover} alt={item.product.title} className="w-full h-full object-contain p-1" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-black text-[#1F2937] truncate">{item.product.title}</h3>
+                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{item.product.description}</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 border border-gray-200">
+                        <button onClick={() => handleUpdateQuantity(item.product._id, item.count - 1)} disabled={item.count <= 1} className="w-7 h-7 rounded-lg bg-white shadow flex items-center justify-center text-gray-600 hover:text-[#5C2E3A] disabled:opacity-40 transition-colors"><FaMinus size={8} /></button>
+                        <span className="w-8 text-center font-black text-sm">{item.count}</span>
+                        <button onClick={() => handleUpdateQuantity(item.product._id, item.count + 1)} className="w-7 h-7 rounded-lg bg-white shadow flex items-center justify-center text-gray-600 hover:text-[#5C2E3A] transition-colors"><FaPlus size={8} /></button>
+                      </div>
+                      <span className="font-black text-[#5C2E3A]">{item.price.toLocaleString()} <span className="text-xs text-[#D4AF37]">ر.ع</span></span>
+                    </div>
+                  </div>
+                  <button onClick={() => handleRemove(item.product._id)} className="w-9 h-9 rounded-xl bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center shrink-0 transition-colors"><FaTrashAlt size={12} /></button>
+                </div>
+              ))}
+            </div>
+
+            {/* Mini summary */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <div className="flex justify-between text-sm text-gray-500 mb-2">
+                <span>{t('cart.total')} ({cartItems.length})</span>
+                <span className="font-bold">{cartTotal.toLocaleString()} {t('common.egp')}</span>
+              </div>
+              <button onClick={() => setStep('checkout')} className="w-full h-13 mt-3 bg-[#5C2E3A] text-white rounded-xl font-black text-base flex items-center justify-center gap-3 hover:bg-[#4A2330] transition-all shadow-lg py-3.5">
+                {t('cart.checkout')} ←
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── STEP: CHECKOUT ── */}
+        {step === 'checkout' && (
+          <>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="p-5 space-y-7">
+
+                {/* 1. Delivery */}
+                <div className="space-y-3">
+                  <p className="text-sm font-black text-[#5C2E3A] uppercase tracking-widest mb-1">{t('cart.deliveryMethodTitle')}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div onClick={() => setDeliveryMethod('delivery')} className={sel(deliveryMethod === 'delivery')}>
+                      <div className={iconBox(deliveryMethod === 'delivery')}><FaTruck size={16} /></div>
+                      <div><p className="font-black text-base">{t('cart.deliveryOptionDelivery')}</p><p className="text-sm text-[#D4AF37] font-bold">{shippingFee} {t('common.egp')}</p></div>
+                    </div>
+                    <div onClick={() => setDeliveryMethod('pickup')} className={sel(deliveryMethod === 'pickup')}>
+                      <div className={iconBox(deliveryMethod === 'pickup')}><FaBoxOpen size={16} /></div>
+                      <div><p className="font-black text-base">{t('cart.deliveryOptionPickup')}</p><p className="text-sm text-green-500 font-bold">{t('cart.free')}</p></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Address */}
+                {deliveryMethod === 'delivery' && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-black text-[#5C2E3A] uppercase tracking-widest mb-1">{t('cart.deliveryInfoTitle')}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="relative">
+                        <FaCity className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
+                        <input type="text" name="city" value={shippingAddress.city} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.cityPlaceholder')} />
+                      </div>
+                      <div className="relative">
+                        <FaPhoneAlt className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
+                        <input type="tel" name="phone" value={shippingAddress.phone} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.phonePlaceholder')} />
+                      </div>
+                      <div className="relative sm:col-span-2">
+                        <FaMapMarkerAlt className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
+                        <input type="text" name="details" value={shippingAddress.details} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.addressPlaceholder')} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2b. Pickup Contact Info */}
+                {deliveryMethod === 'pickup' && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-black text-[#5C2E3A] uppercase tracking-widest mb-1">{t('cart.pickupContactInfoTitle')}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="relative">
+                        <svg className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400" width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path d="M10 10a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 1114 0H3z"/></svg>
+                        <input type="text" name="name" value={shippingAddress.name} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.namePlaceholder')} />
+                      </div>
+                      <div className="relative">
+                        <FaPhoneAlt className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
+                        <input type="tel" name="phone" value={shippingAddress.phone} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.phonePlaceholder')} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Wrapping */}
+                <div className="space-y-3">
+                  <p className="text-sm font-black text-[#5C2E3A] uppercase tracking-widest mb-1">{t('cart.additionalOptionsTitle')}</p>
+                  <div onClick={() => setNeedsWrapping(!needsWrapping)} className={sel(needsWrapping) + (needsWrapping ? ' !border-[#D4AF37] !bg-[#D4AF37]/5' : '')}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${needsWrapping ? 'bg-[#D4AF37] text-white' : 'bg-gray-100 text-gray-400'}`}><FaGift size={16} /></div>
+                    <div className="flex-1"><p className="font-black text-base">{t('cart.wrappingLabel')}</p><p className="text-sm text-gray-500">+{wrappingFee} {t('common.egp')}</p></div>
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${needsWrapping ? 'bg-[#D4AF37] border-[#D4AF37]' : 'border-gray-300'}`}>{needsWrapping && <FaCheck className="text-white" size={8} />}</div>
+                  </div>
+                </div>
+
+                {/* 4. Payment */}
+                <div className="space-y-3">
+                  <p className="text-sm font-black text-[#5C2E3A] uppercase tracking-widest mb-1">{t('cart.paymentMethodTitle')}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div onClick={() => setPaymentMethod('card')} className={sel(paymentMethod === 'card')}>
+                      <div className={iconBox(paymentMethod === 'card')}><FaCreditCard size={16} /></div>
+                      <div><p className="font-black text-base">{t('cart.cardPayment')}</p><p className="text-sm text-gray-500">{t('cart.cardPaymentDesc')}</p></div>
+                    </div>
+                    <div onClick={() => setPaymentMethod('cash')} className={sel(paymentMethod === 'cash')}>
+                      <div className={iconBox(paymentMethod === 'cash')}><FaMoneyBillWave size={16} /></div>
+                      <div><p className="font-black text-base">{t('cart.codPayment')}</p><p className="text-sm text-gray-500">{t('cart.codPaymentDesc')}</p></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary + CTA */}
+              <div className="bg-[#5C2E3A] p-6 text-white">
+                <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">{t('cart.summaryTitle')}</p>
+                <div className="space-y-2.5 mb-6">
+                  {[
+                    { label: t('cart.subtotalLabel'), val: `${cartTotal.toLocaleString()} ${t('common.egp')}` },
+                    { label: t('cart.taxLabel'), val: `${taxAmount.toFixed(3)} ${t('common.egp')}` },
+                    { label: t('cart.shippingLabel'), val: shippingFee === 0 ? t('cart.free') : `${shippingFee} ${t('common.egp')}`, gold: shippingFee > 0, green: shippingFee === 0 },
+                    ...(needsWrapping ? [{ label: t('cart.giftWrapLabel'), val: `${wrappingFee.toFixed(3)} ${t('common.egp')}`, gold: true }] : []),
+                  ].map((r, i) => (
+                    <div key={i} className="flex justify-between text-sm text-white/70">
+                      <span>{r.label}</span>
+                      <span className={`font-bold ${r.gold ? 'text-[#D4AF37]' : r.green ? 'text-green-400' : ''}`}>{r.val}</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-white/10 pt-3 flex justify-between items-end">
+                    <span className="font-black text-lg">{t('cart.finalTotalLabel')}</span>
+                    <div className="text-end">
+                      <span className="text-4xl font-black text-[#D4AF37]">{finalTotal.toFixed(3)}</span>
+                      <span className="text-xs text-white/40 block">{t('cart.currencyName')}</span>
+                    </div>
+                  </div>
+                </div>
+                <button onClick={handleConfirmOrder} disabled={checkoutLoading} className="w-full h-14 bg-white text-[#5C2E3A] rounded-xl font-black text-base flex items-center justify-center gap-3 hover:bg-[#D4AF37] hover:text-white transition-all shadow-lg active:scale-[0.98] disabled:opacity-60">
+                  {checkoutLoading
+                    ? <div className="w-6 h-6 border-2 border-[#5C2E3A] border-t-transparent rounded-full animate-spin" />
+                    : <><FaShieldAlt className="text-sm" />{paymentMethod === 'card' ? t('cart.proceedToPayment') : t('cart.confirmOrderNow')}</>
+                  }
+                </button>
+                <p className="text-center text-[10px] text-white/30 mt-8 flex items-center justify-center gap-1">
+                  <FaShieldAlt size={9} /> {t('cart.transactionsSecure')}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
-
-

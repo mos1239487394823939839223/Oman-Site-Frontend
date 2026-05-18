@@ -98,13 +98,13 @@ export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
             onChange={handleInputChange}
             onFocus={handleInputFocus}
             placeholder={displayPlaceholder}
-            className="w-full px-4 py-3 pl-12 pr-12 text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3a3a]/50 focus:border-transparent"
+            className="w-full px-6 py-4 pl-14 pr-14 text-[#0F2137] font-medium bg-white border border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-4 focus:ring-maroon-main/10 focus:border-maroon-main placeholder:text-gray-400 transition-all"
           />
           
           {/* Search Icon */}
-          <div className="absolute inset-y-0 left-0 flex items-center pl-4">
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <div className="absolute inset-y-0 left-0 flex items-center pl-5">
+            <svg className="w-6 h-6 text-maroon-main" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
 
@@ -120,9 +120,9 @@ export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
             type="submit"
             className="absolute inset-y-0 right-0 flex items-center pr-3"
           >
-            <div className="bg-[#1a3a3a] hover:opacity-90 text-white p-2 rounded-md transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <div className="bg-maroon-main hover:bg-maroon-dark text-white p-2.5 rounded-xl transition-all shadow-md">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
           </button>
@@ -136,7 +136,7 @@ export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
             <div
               key={product._id}
               onClick={() => handleSuggestionClick(product)}
-              className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+              className="flex items-center p-3 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-b-0"
             >
               <img
                 src={product.imageCover}
@@ -144,11 +144,11 @@ export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
                 className="w-12 h-12 object-cover rounded-md mr-3"
               />
               <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900 line-clamp-1">
+                <h4 className="text-sm font-semibold text-[#0F2137] line-clamp-1">
                   {product.title}
                 </h4>
-                <p className="text-xs text-gray-500">{product.category.name}</p>
-                <p className="text-sm font-semibold text-[#1a3a3a]">
+                <p className="text-xs text-gray-500 font-normal">{product.category.name}</p>
+                <p className="text-sm font-medium text-maroon-main">
                   {product.priceAfterDiscount ? product.priceAfterDiscount.toLocaleString() : product.price.toLocaleString()} {t('common.egp')}
                 </p>
               </div>

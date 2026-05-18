@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Product, Category, Brand } from "@/services/clientApi";
+import { Product, Category, Brand, Subcategory } from "@/services/clientApi";
 import LoadingSpinner from "./LoadingSpinner";
 
 interface ProductFormProps {
   product?: Product;
   categories: Category[];
+  subcategories?: Subcategory[];
   brands: Brand[];
   onSubmit: (data: FormData) => Promise<void>;
   onCancel: () => void;
@@ -20,14 +21,16 @@ interface FormData {
   priceAfterDiscount?: number;
   quantity: number;
   category: string;
-  brand: string;
+  subcategory?: string;
   imageCover: string;
   images: string[];
+  isRecommended?: boolean;
 }
 
 export default function ProductForm({
   product,
   categories,
+  subcategories,
   brands,
   onSubmit,
   onCancel,
@@ -40,9 +43,10 @@ export default function ProductForm({
     priceAfterDiscount: undefined,
     quantity: 0,
     category: "",
-    brand: "",
+    subcategory: "",
     imageCover: "",
     images: [],
+    isRecommended: false,
   });
 
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -58,9 +62,11 @@ export default function ProductForm({
         priceAfterDiscount: product.priceAfterDiscount,
         quantity: product.quantity || 0,
         category: product.category?._id || "",
-        brand: product.brand?._id || "",
+        subcategory: (product as any).subcategory?._id || (product as any).subcategory || "",
+        childSubcategory: (product as any).childSubcategory || "",
         imageCover: product.imageCover || "",
         images: product.images || [],
+        isRecommended: (product as any).isRecommended || false,
       });
       setImageUrls(product.images || []);
     }
@@ -143,9 +149,6 @@ export default function ProductForm({
     if ((categories?.length || 0) > 0 && !formData.category) {
       newErrors.category = "Category is required";
     }
-    if ((brands?.length || 0) > 0 && !formData.brand) {
-      newErrors.brand = "Brand is required";
-    }
     if (!formData.imageCover.trim()) {
       newErrors.imageCover = "Cover image is required";
     } else if (!isValidUrl(formData.imageCover)) {
@@ -164,16 +167,18 @@ export default function ProductForm({
     const payload: FormData = {
       title: formData.title.trim(),
       description: formData.description.trim(),
-      price: Number(formData.price) ,
+      price: Number(formData.price),
       priceAfterDiscount:
         formData.priceAfterDiscount === undefined || formData.priceAfterDiscount === null || isNaN(Number(formData.priceAfterDiscount))
           ? undefined
           : Number(formData.priceAfterDiscount),
-      quantity: Math.max(0, Number(formData.quantity) ),
+      quantity: Math.max(0, Number(formData.quantity)),
       category: formData.category,
-      brand: formData.brand,
+      subcategory: formData.subcategory,
+      patternType: (formData as any).patternType,
       imageCover: formData.imageCover.trim(),
       images: formData.images.map((u) => u.trim()),
+      isRecommended: formData.isRecommended,
     };
 
     await onSubmit(payload);
@@ -192,9 +197,8 @@ export default function ProductForm({
           name="title"
           value={formData.title}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-            errors.title ? "border-red-500" : "border-gray-300"
-          }`}
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.title ? "border-red-500" : "border-gray-300"
+            }`}
         />
         {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
       </div>
@@ -210,9 +214,8 @@ export default function ProductForm({
           value={formData.description}
           onChange={handleChange}
           rows={4}
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-            errors.description ? "border-red-500" : "border-gray-300"
-          }`}
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.description ? "border-red-500" : "border-gray-300"
+            }`}
         />
         {errors.description && (
           <p className="mt-1 text-sm text-red-600">{errors.description}</p>
@@ -233,9 +236,8 @@ export default function ProductForm({
             onChange={handleChange}
             min="0"
             step="0.01"
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-              errors.price ? "border-red-500" : "border-gray-300"
-            }`}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.price ? "border-red-500" : "border-gray-300"
+              }`}
           />
           {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
         </div>
@@ -276,9 +278,8 @@ export default function ProductForm({
             value={formData.quantity}
             onChange={handleChange}
             min="0"
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-              errors.quantity ? "border-red-500" : "border-gray-300"
-            }`}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.quantity ? "border-red-500" : "border-gray-300"
+              }`}
           />
           {errors.quantity && (
             <p className="mt-1 text-sm text-red-600">{errors.quantity}</p>
@@ -294,9 +295,8 @@ export default function ProductForm({
             name="category"
             value={formData.category}
             onChange={handleChange}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-              errors.category ? "border-red-500" : "border-gray-300"
-            }`}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.category ? "border-red-500" : "border-gray-300"
+              }`}
           >
             {categories.length === 0 ? (
               <option value="">No categories available</option>
@@ -315,31 +315,64 @@ export default function ProductForm({
         </div>
 
         <div>
-          <label htmlFor="brand" className="block text-sm font-medium text-gray-700 mb-1">
-            Brand *
+          <label htmlFor="subcategory" className="block text-sm font-medium text-gray-700 mb-1">
+            Subcategory
           </label>
           <select
-            id="brand"
-            name="brand"
-            value={formData.brand}
+            id="subcategory"
+            name="subcategory"
+            value={formData.subcategory}
             onChange={handleChange}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-              errors.brand ? "border-red-500" : "border-gray-300"
-            }`}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
           >
-            {brands.length === 0 ? (
-              <option value="">No brands available</option>
-            ) : (
-              <option value="" disabled hidden>Select a brand</option>
-            )}
-            {brands.map((brand) => (
-              <option key={brand._id} value={brand._id}>
-                {brand.name}
-              </option>
-            ))}
+            <option value="">Select a subcategory (optional)</option>
+            {subcategories
+              ?.filter((sub: any) => {
+                const subCatId = typeof sub.category === 'object' ? sub.category?._id : sub.category;
+                return subCatId === formData.category && !sub.parent;
+              })
+              .map((sub) => (
+                <option key={sub._id} value={sub._id}>
+                  {sub.name}
+                </option>
+              ))}
           </select>
-          {errors.brand && <p className="mt-1 text-sm text-red-600">{errors.brand}</p>}
         </div>
+
+        {/* Pattern Type (Hardcoded) */}
+        <div className="flex-1 min-w-[200px]">
+          <label htmlFor="patternType" className="block text-sm font-medium text-gray-700 mb-1">
+            نوع النقش
+          </label>
+          <select
+            id="patternType"
+            name="patternType"
+            value={(formData as any).patternType || ""}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
+          >
+            <option value="">بدون تحديد</option>
+            <option value="نقش رفيع">نقش رفيع</option>
+            <option value="نقش عريض">نقش عريض</option>
+          </select>
+          <p className="mt-1 text-[10px] text-gray-400">سيتم استخدام هذا التقسيم لعرض المنتجات في الموقع</p>
+        </div>
+
+      </div>
+
+      {/* Recommended Toggle */}
+      <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+        <input
+          type="checkbox"
+          id="isRecommended"
+          name="isRecommended"
+          checked={formData.isRecommended}
+          onChange={(e) => setFormData(prev => ({ ...prev, isRecommended: e.target.checked }))}
+          className="w-5 h-5 text-yellow-600 border-yellow-300 rounded focus:ring-yellow-500"
+        />
+        <label htmlFor="isRecommended" className="text-sm font-bold text-yellow-800 cursor-pointer">
+          إضافة إلى "المنتجات الأكثر مبيعاً" (Best Selling Products)
+        </label>
       </div>
 
       {/* Image Cover */}
@@ -354,9 +387,8 @@ export default function ProductForm({
           value={formData.imageCover}
           onChange={handleChange}
           placeholder="https://example.com/image.jpg"
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-            errors.imageCover ? "border-red-500" : "border-gray-300"
-          }`}
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.imageCover ? "border-red-500" : "border-gray-300"
+            }`}
         />
         {errors.imageCover && (
           <p className="mt-1 text-sm text-red-600">{errors.imageCover}</p>

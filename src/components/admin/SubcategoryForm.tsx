@@ -10,18 +10,20 @@ interface SubcategoryFormProps {
   onSubmit: (data: FormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
+  allSubcategories?: Subcategory[];
 }
-
 interface FormData {
   name: string;
   image: string;
   category: string;
+  parent?: string;
   slug?: string;
 }
 
 export default function SubcategoryForm({
   subcategory,
   categories,
+  allSubcategories = [],
   onSubmit,
   onCancel,
   loading = false,
@@ -30,6 +32,7 @@ export default function SubcategoryForm({
     name: "",
     image: "",
     category: "",
+    parent: "",
     slug: "",
   });
 
@@ -40,9 +43,10 @@ export default function SubcategoryForm({
       setFormData({
         name: subcategory.name || "",
         image: subcategory.image || "",
-        category: typeof subcategory.category === "string" 
-          ? subcategory.category 
-          : subcategory.category?._id || "",
+        category: typeof subcategory.category === "string"
+          ? subcategory.category
+          : (subcategory.category as any)?._id || "",
+        parent: (subcategory as any).parent || "",
         slug: subcategory.slug || "",
       });
     }
@@ -105,9 +109,8 @@ export default function SubcategoryForm({
           name="name"
           value={formData.name}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-            errors.name ? "border-red-500" : "border-gray-300"
-          }`}
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.name ? "border-red-500" : "border-gray-300"
+            }`}
           placeholder="Enter subcategory name"
         />
         {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
@@ -123,9 +126,8 @@ export default function SubcategoryForm({
           name="category"
           value={formData.category}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-            errors.category ? "border-red-500" : "border-gray-300"
-          }`}
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.category ? "border-red-500" : "border-gray-300"
+            }`}
         >
           <option value="">Select a category</option>
           {categories.map((cat) => (
@@ -137,23 +139,6 @@ export default function SubcategoryForm({
         {errors.category && (
           <p className="mt-1 text-sm text-red-600">{errors.category}</p>
         )}
-      </div>
-
-      {/* Slug */}
-      <div>
-        <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
-          Slug
-        </label>
-        <input
-          type="text"
-          id="slug"
-          name="slug"
-          value={formData.slug}
-          onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
-          placeholder="subcategory-slug (auto-generated from name)"
-        />
-        <p className="mt-1 text-xs text-gray-500">Auto-generated from name if left empty</p>
       </div>
 
       {/* Image */}
@@ -168,9 +153,8 @@ export default function SubcategoryForm({
           value={formData.image}
           onChange={handleChange}
           placeholder="https://example.com/subcategory-image.jpg"
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-            errors.image ? "border-red-500" : "border-gray-300"
-          }`}
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.image ? "border-red-500" : "border-gray-300"
+            }`}
         />
         {errors.image && <p className="mt-1 text-sm text-red-600">{errors.image}</p>}
         {formData.image && (
