@@ -1,284 +1,184 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getCart, addToCart as addToCartAPI, removeCartItem, updateCartItem as updateCartItemAPI, clearCart as clearCartAPI, CartItem } from '@/services/clientApi';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import {
+  getCart,
+  addToCart as addToCartAPI,
+  removeCartItem,
+  updateCartItem as updateCartItemAPI,
+  clearCart as clearCartAPI,
+  applyCoupon as applyCouponAPI,
+  CartItem,
+} from '@/services/clientApi';
+import { useAuth } from '@/components/AuthProvider';
+
+export class LoginRequiredError extends Error {
+  constructor() {
+    super('LOGIN_REQUIRED');
+    this.name = 'LoginRequiredError';
+  }
+}
 
 interface CartContextType {
   cartItems: CartItem[];
   cartCount: number;
   cartTotal: number;
-  addToCart: (productId: string, quantity?: number) => Promise<void>;
-  removeFromCart: (productId: string) => Promise<void>;
-  updateCartItem: (productId: string, quantity: number) => Promise<void>;
+  cartTotalAfterDiscount?: number;
+  addToCart: (
+    itemId: string,
+    quantity?: number,
+    color?: string,
+    options?: { isGift?: boolean }
+  ) => Promise<void>;
+  removeFromCart: (itemId: string) => Promise<void>;
+  updateCartItem: (itemId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
+  applyCoupon: (coupon: string) => Promise<void>;
   refreshCart: () => Promise<void>;
   loading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+function getToken(): string | null {
+  if (typeof window !== 'undefined') return localStorage.getItem('token');
+  return null;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
+  const [cartTotalAfterDiscount, setCartTotalAfterDiscount] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
+  function applyCartData(data: any) {
+    // Backend returns { data: { cartItems: [...], totalCartPrice: N } }
+    // Fallbacks: flat { cartItems: [...] } or { data: [] } (empty)
+    const cartData = (data?.data && !Array.isArray(data.data)) ? data.data : data;
+    const rawItems: any[] = Array.isArray(cartData?.cartItems) ? cartData.cartItems
+      : Array.isArray(data?.data) ? data.data
+      : [];
+    // Normalize: backend uses "quantity", our interface uses "count"
+    const items: CartItem[] = rawItems.map((item: any) => ({
+      ...item,
+      product: item.product || item.gift,
+      count: item.count ?? item.quantity ?? 1,
+    }));
+    setCartItems(items);
+    setCartCount(items.length);
+    setCartTotal(cartData?.totalCartPrice ?? items.reduce((s: number, i: any) => s + i.price * (i.count ?? 1), 0));
+    setCartTotalAfterDiscount(cartData?.totalPriceAfterDiscount);
+  }
 
-  const refreshCart = async () => {
-    let loadingTimeout: NodeJS.Timeout | undefined;
-    
-    try {
-      if (loading) return;
-      
-
-      setLoading(true);
-      
-      loadingTimeout = setTimeout(() => {
-
-        setLoading(false);
-      }, 5000);
-      
-      const token = localStorage.getItem('token');
-      const user = localStorage.getItem('user');
-      
-
-      
-      const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
-
-      
-      setCartItems([...cartData]);
-      setCartCount(cartData.length);
-      setCartTotal(cartData.reduce((sum: number, item: any) => sum + (item.price * item.count), 0));
-      
-      window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
-
-      
-      /* Disabling external API sync for local products
-      if (token && user && token.length > 10) {
-        try {
-          console.log('CartProvider: Attempting to fetch cart from API');
-          const response = await getCart(token);
-          // ... (rest of sync logic)
-        } catch (apiError) {
-          console.error('CartProvider: API error fetching cart:', apiError);
-        }
-      }
-      */
-    } catch (error) {
-      console.error('Error refreshing cart:', error);
-    } finally {
-
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-      }
-      setTimeout(() => setLoading(false), 100);
+  const refreshCart = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setCartItems([]);
+      setCartCount(0);
+      setCartTotal(0);
+      setCartTotalAfterDiscount(undefined);
+      return;
     }
-  };
-
-  useEffect(() => {
-
-    refreshCart().catch(error => {
-      console.error('CartProvider: Error in initial refresh:', error);
-    });
+    try {
+      setLoading(true);
+      const data = await getCart(token);
+      applyCartData(data);
+    } catch {
+      setCartItems([]);
+      setCartCount(0);
+      setCartTotal(0);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'cart' && e.newValue !== null) {
+    refreshCart();
+  }, [isAuthenticated, refreshCart]);
 
-        const cartData = JSON.parse(e.newValue);
-        setCartItems([...cartData]);
-        setCartCount(cartData.length);
-        setCartTotal(cartData.reduce((sum: number, item: any) => sum + (item.price * item.count), 0));
-        
-        window.dispatchEvent(new CustomEvent('cartUpdated'));
-      }
-    };
-
-    const handleCustomStorageChange = () => {
-
-      const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
-      setCartItems([...cartData]);
-      setCartCount(cartData.length);
-      setCartTotal(cartData.reduce((sum: number, item: any) => sum + (item.price * item.count), 0));
-      
-      window.dispatchEvent(new CustomEvent('cartUpdated'));
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('cartUpdated', handleCustomStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('cartUpdated', handleCustomStorageChange);
-    };
-  }, []);
-
-  const addToCart = async (productId: string, quantity: number = 1) => {
+  const addToCart = async (
+    itemId: string,
+    _quantity: number = 1,
+    color?: string,
+    options?: { isGift?: boolean }
+  ) => {
+    const token = getToken();
+    if (!token) throw new LoginRequiredError();
     try {
-      // Prevent multiple simultaneous calls
-      if (loading) return;
-      
       setLoading(true);
-      
-      const token = localStorage.getItem('token');
-
-      
-      // Always update localStorage first for immediate UI feedback
-      const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
-      const existingItem = cartData.find((item: any) => item.product._id === productId);
-      
-      if (existingItem) {
-        existingItem.count += quantity;
-      } else {
-        // Get product details from API or use basic info
-        try {
-          const { getProduct } = await import('@/services/clientApi');
-          const productResponse = await getProduct(productId);
-          const product = productResponse.data;
-          
-          cartData.push({
-            _id: Date.now().toString(),
-            product: product,
-            count: quantity,
-            price: product.price
-          });
-        } catch (error) {
-          // If can't get product details, create basic item
-          cartData.push({
-            _id: Date.now().toString(),
-            product: { _id: productId, title: 'Product', price: 0 },
-            count: quantity,
-            price: 0
-          });
-        }
-      }
-      
-      localStorage.setItem('cart', JSON.stringify(cartData));
-      
-      setCartItems([...cartData]);
-      setCartCount(cartData.length);
-      setCartTotal(cartData.reduce((sum: number, item: any) => sum + (item.price * item.count), 0));
-
-      // Dispatch custom event to notify other components
+      const data = await addToCartAPI(itemId, token, options);
+      applyCartData(data);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
-      // If user is authenticated, try to sync with API
-      /* Disabling external API sync for local products
-      if (token) {
-        try {
-          await addToCartAPI(productId, token);
-        } catch (apiError) {
-          console.error('CartProvider: API error adding to cart:', apiError);
-        }
-      }
-      */
-    } catch (error) {
-      console.error('Error adding to cart:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const removeFromCart = async (productId: string) => {
+  const removeFromCart = async (itemId: string) => {
+    const token = getToken();
+    if (!token) return;
     try {
-      setLoading(true);
-      
-      // Always update localStorage first for immediate UI feedback
-      const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
-      const updatedCart = cartData.filter((item: any) => item.product._id !== productId);
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-      
-      // Update state immediately
-      setCartItems([...updatedCart]); // Create new array to trigger re-render
-      setCartCount(updatedCart.length);
-      setCartTotal(updatedCart.reduce((sum: number, item: any) => sum + (item.price * item.count), 0));
-      
-      // Dispatch custom event to notify other components
+      // Optimistic in-place removal — no global loading to avoid full re-render
+      setCartItems(prev => {
+        const next = prev.filter(item => item._id !== itemId);
+        setCartCount(next.length);
+        return next;
+      });
+      const data = await removeCartItem(itemId, token);
+      const cartData = (data?.data && !Array.isArray(data.data)) ? data.data : data;
+      const newTotal = cartData?.totalCartPrice;
+      if (newTotal !== undefined) setCartTotal(newTotal);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          await removeCartItem(productId, token);
-          return;
-        } catch (apiError) {
-          console.error('API error removing from cart:', apiError);
-          // Keep localStorage data
-        }
-      }
-    } catch (error) {
-      console.error('Error removing from cart:', error);
-    } finally {
-      setLoading(false);
+    } catch {
+      // On error, refresh to get back to consistent state
+      await refreshCart();
     }
   };
 
-  const updateCartItem = async (productId: string, quantity: number) => {
+  const updateCartItem = async (itemId: string, quantity: number) => {
+    const token = getToken();
+    if (!token) return;
     try {
-      setLoading(true);
-      
-      // Always update localStorage first for immediate UI feedback
-      const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
-      const item = cartData.find((item: any) => item.product._id === productId);
-      if (item) {
-        item.count = quantity;
-        localStorage.setItem('cart', JSON.stringify(cartData));
-        
-        // Update state immediately
-        setCartItems([...cartData]); // Create new array to trigger re-render
-        setCartCount(cartData.length);
-        setCartTotal(cartData.reduce((sum: number, item: any) => sum + (item.price * item.count), 0));
-        
-        // Dispatch custom event to notify other components
-        window.dispatchEvent(new CustomEvent('cartUpdated'));
-      }
-      
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          await updateCartItemAPI(productId, quantity, token);
-          return;
-        } catch (apiError) {
-          console.error('API error updating cart item:', apiError);
-          // Keep localStorage data
-        }
-      }
-    } catch (error) {
-      console.error('Error updating cart item:', error);
-    } finally {
-      setLoading(false);
+      // Optimistic in-place update — no global loading to avoid full re-render
+      setCartItems(prev => prev.map(item =>
+        item._id === itemId ? { ...item, count: quantity } : item
+      ));
+      const data = await updateCartItemAPI(itemId, quantity, token);
+      const cartData = (data?.data && !Array.isArray(data.data)) ? data.data : data;
+      const newTotal = cartData?.totalCartPrice;
+      if (newTotal !== undefined) setCartTotal(newTotal);
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
+    } catch {
+      // On error, refresh to get back to consistent state
+      await refreshCart();
     }
   };
 
   const clearCart = async () => {
+    const token = getToken();
+    if (!token) return;
     try {
       setLoading(true);
-      
-      // Always update localStorage first for immediate UI feedback
-      localStorage.setItem('cart', JSON.stringify([]));
-      
-      // Update state immediately
+      await clearCartAPI(token);
       setCartItems([]);
       setCartCount(0);
       setCartTotal(0);
-      
-      // Dispatch custom event to notify other components
+      setCartTotalAfterDiscount(undefined);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          await clearCartAPI(token);
-          return;
-        } catch (apiError) {
-          console.error('API error clearing cart:', apiError);
-          // Keep localStorage data (empty cart)
-        }
-      }
-    } catch (error) {
-      console.error('Error clearing cart:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyCoupon = async (coupon: string) => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      setLoading(true);
+      const data = await applyCouponAPI(coupon, token);
+      applyCartData(data);
     } finally {
       setLoading(false);
     }
@@ -289,12 +189,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       cartItems,
       cartCount,
       cartTotal,
+      cartTotalAfterDiscount,
       addToCart,
       removeFromCart,
       updateCartItem,
       clearCart,
+      applyCoupon,
       refreshCart,
-      loading
+      loading,
     }}>
       {children}
     </CartContext.Provider>
@@ -303,10 +205,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export function useCart() {
   const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
+  if (!context) throw new Error('useCart must be used within a CartProvider');
   return context;
 }
-
-

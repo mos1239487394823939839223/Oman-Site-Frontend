@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCategories, Category } from "@/services/clientApi";
+import { resolveMediaUrl } from "@/lib/media";
 import { useTranslation } from "react-i18next";
 
 interface CategoriesBarProps {
@@ -97,9 +98,10 @@ export default function CategoriesBar({ onCategorySelect, selectedCategory }: Ca
                   : 'border-white/10 bg-white/5 group-hover:border-[#D4AF37]/50'
                 }`}>
                 <img
-                  src={category.image || '/placeholder.svg'}
+                  src={resolveMediaUrl(category.image, "categories")}
                   alt={category.name}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
                 />
               </div>
               <span className={`text-xs md:text-sm font-black text-center transition-colors uppercase tracking-widest ${selectedCategory === category._id ? 'text-[#D4AF37]' : 'text-white/60'

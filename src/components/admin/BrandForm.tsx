@@ -11,10 +11,8 @@ interface BrandFormProps {
   loading?: boolean;
 }
 
-interface FormData {
+interface BrandFormState {
   name: string;
-  image: string;
-  slug?: string;
 }
 
 export default function BrandForm({
@@ -23,11 +21,11 @@ export default function BrandForm({
   onCancel,
   loading = false,
 }: BrandFormProps) {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<BrandFormState>({
     name: "",
-    image: "",
-    slug: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [currentImage, setCurrentImage] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -35,9 +33,8 @@ export default function BrandForm({
     if (brand) {
       setFormData({
         name: brand.name || "",
-        image: brand.image || "",
-        slug: brand.slug || "",
       });
+      setCurrentImage(brand.image || "");
     }
   }, [brand]);
 
@@ -46,10 +43,6 @@ export default function BrandForm({
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      // Auto-generate slug from name
-      ...(name === "name" && {
-        slug: value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
-      }),
     }));
     // Clear error for this field
     if (errors[name]) {
@@ -64,8 +57,8 @@ export default function BrandForm({
       newErrors.name = "Brand name is required";
     }
 
-    if (!formData.image.trim()) {
-      newErrors.image = "Brand image URL is required";
+    if (!brand && !imageFile) {
+      newErrors.image = "Brand image file is required";
     }
 
     setErrors(newErrors);
@@ -76,7 +69,17 @@ export default function BrandForm({
     e.preventDefault();
     if (!validate()) return;
 
-    await onSubmit(formData);
+    const payload = new FormData();
+    const isEdit = !!brand;
+
+    if (!isEdit || formData.name.trim() !== (brand.name || "")) {
+      payload.append("name", formData.name.trim());
+    }
+    if (imageFile) {
+      payload.append("image", imageFile);
+    }
+
+    await onSubmit(payload);
   };
 
   return (
@@ -100,43 +103,25 @@ export default function BrandForm({
         {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
       </div>
 
-      {/* Slug */}
-      <div>
-        <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
-          Slug
-        </label>
-        <input
-          type="text"
-          id="slug"
-          name="slug"
-          value={formData.slug}
-          onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
-          placeholder="brand-slug (auto-generated from name)"
-        />
-        <p className="mt-1 text-xs text-gray-500">Auto-generated from name if left empty</p>
-      </div>
-
       {/* Image */}
       <div>
         <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
-          Brand Image URL *
+          Brand Image {brand ? "" : "*"}
         </label>
         <input
-          type="url"
+          type="file"
           id="image"
           name="image"
-          value={formData.image}
-          onChange={handleChange}
-          placeholder="https://example.com/brand-image.jpg"
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files?.[0] || null)}
           className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
             errors.image ? "border-red-500" : "border-gray-300"
           }`}
         />
         {errors.image && <p className="mt-1 text-sm text-red-600">{errors.image}</p>}
-        {formData.image && (
+        {currentImage && (
           <img
-            src={formData.image}
+            src={currentImage}
             alt="Brand preview"
             className="mt-2 w-32 h-32 object-cover rounded-lg border border-gray-300"
             onError={(e) => {

@@ -10,7 +10,7 @@ import Image from "next/image";
 import styles from "./PaymentPage.module.css";
 
 function PaymentPageContent() {
-  const { cartItems, cartTotal, clearCart } = useCart();
+  const { cartItems, cartTotal, cartTotalAfterDiscount, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -101,6 +101,10 @@ function PaymentPageContent() {
       setLoading(false);
     }
   };
+
+  const hasDiscount = typeof cartTotalAfterDiscount === "number" && cartTotalAfterDiscount < cartTotal;
+  const finalTotal = hasDiscount ? cartTotalAfterDiscount : cartTotal;
+  const discountValue = hasDiscount ? (cartTotal - cartTotalAfterDiscount) : 0;
 
   return (
     <div className={styles.container}>
@@ -245,9 +249,15 @@ function PaymentPageContent() {
                   <span className="text-gray-500 font-bold">رسوم الشحن</span>
                   <span className="text-green-600 font-black">مجاني</span>
                 </div>
+                {hasDiscount && (
+                  <div className={styles.summaryRow}>
+                    <span className="text-gray-500 font-bold">الخصم</span>
+                    <span className="text-emerald-600 font-black">- {discountValue} ر.ع</span>
+                  </div>
+                )}
                 <div className={styles.totalBox}>
                   <span className="font-black text-lg">المبلغ الإجمالي</span>
-                  <span className="text-[#D4AF37] font-black text-3xl">{cartTotal} ر.ع</span>
+                  <span className="text-[#D4AF37] font-black text-3xl">{finalTotal} ر.ع</span>
                 </div>
               </div>
 

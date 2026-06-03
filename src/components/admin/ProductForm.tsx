@@ -12,19 +12,21 @@ interface ProductFormProps {
   onSubmit: (data: FormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
+  /** Gifts use the same schema as products; price is always 0 on the backend */
+  isGift?: boolean;
 }
 
-interface FormData {
+interface ProductFormState {
   title: string;
   description: string;
   price: number;
   priceAfterDiscount?: number;
+  couponCode?: string;
   quantity: number;
   category: string;
+  brand: string;
   subcategory?: string;
-  imageCover: string;
-  images: string[];
-  isRecommended?: boolean;
+  bestSeller?: boolean;
 }
 
 export default function ProductForm({
@@ -35,22 +37,25 @@ export default function ProductForm({
   onSubmit,
   onCancel,
   loading = false,
+  isGift = false,
 }: ProductFormProps) {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<ProductFormState>({
     title: "",
     description: "",
-    price: 0,
+    price: isGift ? 0 : 0,
     priceAfterDiscount: undefined,
+    couponCode: "",
     quantity: 0,
     category: "",
+    brand: "",
     subcategory: "",
-    imageCover: "",
-    images: [],
-    isRecommended: false,
+    bestSeller: false,
   });
 
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [newImageUrl, setNewImageUrl] = useState<string>("");
+  const [currentImageCover, setCurrentImageCover] = useState<string>("");
+  const [currentImages, setCurrentImages] = useState<string[]>([]);
+  const [imageCoverFile, setImageCoverFile] = useState<File | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -60,15 +65,15 @@ export default function ProductForm({
         description: product.description || "",
         price: product.price || 0,
         priceAfterDiscount: product.priceAfterDiscount,
+        couponCode: (product as any).couponCode || "",
         quantity: product.quantity || 0,
         category: product.category?._id || "",
-        subcategory: (product as any).subcategory?._id || (product as any).subcategory || "",
-        childSubcategory: (product as any).childSubcategory || "",
-        imageCover: product.imageCover || "",
-        images: product.images || [],
-        isRecommended: (product as any).isRecommended || false,
+        brand: product.brand?._id || "",
+        subcategory: (product as any).subCategories?.[0]?._id || (product as any).subCategories?.[0] || "",
+        bestSeller: (product as any).bestSeller || false,
       });
-      setImageUrls(product.images || []);
+      setCurrentImageCover(product.imageCover || "");
+      setCurrentImages(product.images || []);
     }
   }, [product]);
 
@@ -87,40 +92,20 @@ export default function ProductForm({
     }
   };
 
-  const isValidUrl = (url: string) => {
-    try {
-      const u = new URL(url);
-      return u.protocol === "http:" || u.protocol === "https:";
-    } catch {
-      return false;
+  const handleImageCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setImageCoverFile(file);
+    if (file && errors.imageCover) {
+      setErrors((prev) => ({ ...prev, imageCover: "" }));
     }
   };
 
-  const handleImageUrlAdd = (url: string) => {
-    const clean = url.trim();
-    if (!clean) return;
-    if (!isValidUrl(clean)) {
-      setErrors((prev) => ({ ...prev, images: "Please enter a valid image URL" }));
-      return;
+  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setGalleryFiles(files);
+    if (files.length && errors.images) {
+      setErrors((prev) => ({ ...prev, images: "" }));
     }
-    if (imageUrls.includes(clean)) {
-      setErrors((prev) => ({ ...prev, images: "This image URL is already added" }));
-      return;
-    }
-    setErrors((prev) => ({ ...prev, images: "" }));
-    setImageUrls((prev) => [...prev, clean]);
-    setFormData((prev) => ({
-      ...prev,
-      images: [...prev.images, clean],
-    }));
-  };
-
-  const handleImageRemove = (index: number) => {
-    setImageUrls((prev) => prev.filter((_, i) => i !== index));
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
   };
 
   const validate = (): boolean => {
@@ -131,15 +116,19 @@ export default function ProductForm({
     }
     if (!formData.description.trim()) {
       newErrors.description = "Description is required";
+    } else if (isGift && formData.description.trim().length < 20) {
+      newErrors.description = "Description must be at least 20 characters";
     }
-    if (formData.price <= 0) {
-      newErrors.price = "Price must be greater than 0";
-    }
-    if (formData.priceAfterDiscount !== undefined && formData.priceAfterDiscount !== null) {
-      if (formData.priceAfterDiscount <= 0) {
-        newErrors.priceAfterDiscount = "Discount price must be greater than 0";
-      } else if (formData.priceAfterDiscount > formData.price) {
-        newErrors.priceAfterDiscount = "Discount price cannot exceed price";
+    if (!isGift) {
+      if (formData.price <= 0) {
+        newErrors.price = "Price must be greater than 0";
+      }
+      if (formData.priceAfterDiscount !== undefined && formData.priceAfterDiscount !== null) {
+        if (formData.priceAfterDiscount <= 0) {
+          newErrors.priceAfterDiscount = "Discount price must be greater than 0";
+        } else if (formData.priceAfterDiscount > formData.price) {
+          newErrors.priceAfterDiscount = "Discount price cannot exceed price";
+        }
       }
     }
     if (formData.quantity < 0) {
@@ -149,10 +138,11 @@ export default function ProductForm({
     if ((categories?.length || 0) > 0 && !formData.category) {
       newErrors.category = "Category is required";
     }
-    if (!formData.imageCover.trim()) {
-      newErrors.imageCover = "Cover image is required";
-    } else if (!isValidUrl(formData.imageCover)) {
-      newErrors.imageCover = "Cover image must be a valid URL";
+    if (!isGift && !formData.brand) {
+      newErrors.brand = "Brand is required";
+    }
+    if (!product && !imageCoverFile) {
+      newErrors.imageCover = "Cover image file is required";
     }
 
     setErrors(newErrors);
@@ -163,23 +153,70 @@ export default function ProductForm({
     e.preventDefault();
     if (!validate()) return;
 
-    // Shape clean data
-    const payload: FormData = {
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      price: Number(formData.price),
-      priceAfterDiscount:
-        formData.priceAfterDiscount === undefined || formData.priceAfterDiscount === null || isNaN(Number(formData.priceAfterDiscount))
-          ? undefined
-          : Number(formData.priceAfterDiscount),
-      quantity: Math.max(0, Number(formData.quantity)),
-      category: formData.category,
-      subcategory: formData.subcategory,
-      patternType: (formData as any).patternType,
-      imageCover: formData.imageCover.trim(),
-      images: formData.images.map((u) => u.trim()),
-      isRecommended: formData.isRecommended,
-    };
+    const payload = new FormData();
+    const isEdit = !!product;
+
+    // Original values to diff against
+    const origTitle = product?.title || "";
+    const origDesc = product?.description || "";
+    const origPrice = product?.price ?? 0;
+    const origPAD = product?.priceAfterDiscount;
+    const origCouponCode = (product as any)?.couponCode || "";
+    const origQty = product?.quantity ?? 0;
+    const origCategory = product?.category?._id || "";
+    const origBrand = product?.brand?._id || "";
+    const origSubcategory = (product as any)?.subCategories?.[0]?._id
+      || (product as any)?.subCategories?.[0] || "";
+    const origBestSeller = (product as any)?.bestSeller || false;
+
+    if (!isEdit || formData.title.trim() !== origTitle)
+      payload.append("title", formData.title.trim());
+
+    if (!isEdit || formData.description.trim() !== origDesc)
+      payload.append("description", formData.description.trim());
+
+    if (isGift) {
+      if (!isEdit) payload.append("price", "0");
+    } else {
+      if (!isEdit || Number(formData.price) !== origPrice)
+        payload.append("price", String(Number(formData.price)));
+    }
+
+    if (!isEdit || Number(formData.quantity) !== origQty)
+      payload.append("quantity", String(Math.max(0, Number(formData.quantity))));
+
+    if (!isEdit || formData.category !== origCategory)
+      payload.append("category", formData.category);
+
+    if (formData.brand && (!isEdit || formData.brand !== origBrand))
+      payload.append("brand", formData.brand);
+
+    if (!isGift &&
+      formData.priceAfterDiscount !== undefined &&
+      formData.priceAfterDiscount !== null &&
+      !isNaN(Number(formData.priceAfterDiscount))) {
+      const newPAD = Number(formData.priceAfterDiscount);
+      if (!isEdit || newPAD !== (origPAD ?? undefined))
+        payload.append("priceAfterDiscount", String(newPAD));
+    }
+
+    if (!isGift) {
+      const newCouponCode = (formData.couponCode || "").trim();
+      if (!isEdit) {
+        if (newCouponCode) payload.append("couponCode", newCouponCode);
+      } else if (newCouponCode !== origCouponCode) {
+        payload.append("couponCode", newCouponCode);
+      }
+    }
+
+    if (formData.subcategory && (!isEdit || formData.subcategory !== origSubcategory))
+      payload.append("subCategories", formData.subcategory);
+
+    if (!isGift && (!isEdit || formData.bestSeller !== origBestSeller))
+      payload.append("bestSeller", String(formData.bestSeller ?? false));
+
+    if (imageCoverFile) payload.append("imageCover", imageCoverFile);
+    galleryFiles.forEach((file) => payload.append("images", file));
 
     await onSubmit(payload);
   };
@@ -189,7 +226,7 @@ export default function ProductForm({
       {/* Title */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-          Product Title *
+          {isGift ? "Gift Title" : "Product Title"} *
         </label>
         <input
           type="text"
@@ -222,51 +259,77 @@ export default function ProductForm({
         )}
       </div>
 
-      {/* Price Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-            Price *
-          </label>
-          <input
-            type="number"
-            id="price"
-            name="price"
-            value={formData.price}
-            onChange={handleChange}
-            min="0"
-            step="0.01"
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.price ? "border-red-500" : "border-gray-300"
-              }`}
-          />
-          {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
-        </div>
+      {isGift && (
+        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+          Gifts are always free — price is set to 0 automatically on the server.
+        </p>
+      )}
 
+      {/* Price Fields (products only) */}
+      {!isGift && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+              Price *
+            </label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              value={formData.price}
+              onChange={handleChange}
+              min="0"
+              step="0.01"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.price ? "border-red-500" : "border-gray-300"
+                }`}
+            />
+            {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
+          </div>
+
+          <div>
+            <label
+              htmlFor="priceAfterDiscount"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Price After Discount
+            </label>
+            <input
+              type="number"
+              id="priceAfterDiscount"
+              name="priceAfterDiscount"
+              value={formData.priceAfterDiscount || ""}
+              onChange={handleChange}
+              min="0"
+              step="0.01"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
+            />
+            {errors.priceAfterDiscount && (
+              <p className="mt-1 text-sm text-red-600">{errors.priceAfterDiscount}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!isGift && (
         <div>
-          <label
-            htmlFor="priceAfterDiscount"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Price After Discount
+          <label htmlFor="couponCode" className="block text-sm font-medium text-gray-700 mb-1">
+            Coupon Code
           </label>
           <input
-            type="number"
-            id="priceAfterDiscount"
-            name="priceAfterDiscount"
-            value={formData.priceAfterDiscount || ""}
+            type="text"
+            id="couponCode"
+            name="couponCode"
+            value={formData.couponCode || ""}
             onChange={handleChange}
-            min="0"
-            step="0.01"
+            autoComplete="off"
+            placeholder="e.g. SAVE10"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
           />
-          {errors.priceAfterDiscount && (
-            <p className="mt-1 text-sm text-red-600">{errors.priceAfterDiscount}</p>
-          )}
         </div>
-      </div>
+      )}
 
       {/* Quantity, Category, Brand */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 gap-4 ${isGift ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
         <div>
           <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
             Quantity *
@@ -315,6 +378,31 @@ export default function ProductForm({
         </div>
 
         <div>
+          <label htmlFor="brand" className="block text-sm font-medium text-gray-700 mb-1">
+            Brand {isGift ? "" : "*"}
+          </label>
+          <select
+            id="brand"
+            name="brand"
+            value={formData.brand}
+            onChange={handleChange}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.brand ? "border-red-500" : "border-gray-300"}`}
+          >
+            {brands.length === 0 ? (
+              <option value="">No brands available</option>
+            ) : (
+              <option value="" disabled hidden>Select a brand</option>
+            )}
+            {brands.map((brand) => (
+              <option key={brand._id} value={brand._id}>
+                {brand.name}
+              </option>
+            ))}
+          </select>
+          {errors.brand && <p className="mt-1 text-sm text-red-600">{errors.brand}</p>}
+        </div>
+
+        <div>
           <label htmlFor="subcategory" className="block text-sm font-medium text-gray-700 mb-1">
             Subcategory
           </label>
@@ -338,64 +426,44 @@ export default function ProductForm({
               ))}
           </select>
         </div>
+      </div>
 
-        {/* Pattern Type (Hardcoded) */}
-        <div className="flex-1 min-w-[200px]">
-          <label htmlFor="patternType" className="block text-sm font-medium text-gray-700 mb-1">
-            نوع النقش
+      {!isGift && (
+        <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+          <input
+            type="checkbox"
+            id="bestSeller"
+            name="bestSeller"
+            checked={formData.bestSeller}
+            onChange={(e) => setFormData(prev => ({ ...prev, bestSeller: e.target.checked }))}
+            className="w-5 h-5 text-yellow-600 border-yellow-300 rounded focus:ring-yellow-500"
+          />
+          <label htmlFor="bestSeller" className="text-sm font-bold text-yellow-800 cursor-pointer">
+            إضافة إلى "المنتجات الأكثر مبيعاً" (Best Selling Products)
           </label>
-          <select
-            id="patternType"
-            name="patternType"
-            value={(formData as any).patternType || ""}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
-          >
-            <option value="">بدون تحديد</option>
-            <option value="نقش رفيع">نقش رفيع</option>
-            <option value="نقش عريض">نقش عريض</option>
-          </select>
-          <p className="mt-1 text-[10px] text-gray-400">سيتم استخدام هذا التقسيم لعرض المنتجات في الموقع</p>
         </div>
-
-      </div>
-
-      {/* Recommended Toggle */}
-      <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-        <input
-          type="checkbox"
-          id="isRecommended"
-          name="isRecommended"
-          checked={formData.isRecommended}
-          onChange={(e) => setFormData(prev => ({ ...prev, isRecommended: e.target.checked }))}
-          className="w-5 h-5 text-yellow-600 border-yellow-300 rounded focus:ring-yellow-500"
-        />
-        <label htmlFor="isRecommended" className="text-sm font-bold text-yellow-800 cursor-pointer">
-          إضافة إلى "المنتجات الأكثر مبيعاً" (Best Selling Products)
-        </label>
-      </div>
+      )}
 
       {/* Image Cover */}
       <div>
         <label htmlFor="imageCover" className="block text-sm font-medium text-gray-700 mb-1">
-          Cover Image URL *
+          Cover Image {product ? "" : "*"}
         </label>
         <input
-          type="url"
+          type="file"
           id="imageCover"
           name="imageCover"
-          value={formData.imageCover}
-          onChange={handleChange}
-          placeholder="https://example.com/image.jpg"
+          accept="image/*"
+          onChange={handleImageCoverChange}
           className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.imageCover ? "border-red-500" : "border-gray-300"
             }`}
         />
         {errors.imageCover && (
           <p className="mt-1 text-sm text-red-600">{errors.imageCover}</p>
         )}
-        {formData.imageCover && (
+        {currentImageCover && (
           <img
-            src={formData.imageCover}
+            src={currentImageCover}
             alt="Cover preview"
             className="mt-2 w-32 h-32 object-cover rounded-lg border border-gray-300"
             onError={(e) => {
@@ -410,36 +478,16 @@ export default function ProductForm({
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Additional Images
         </label>
-        <div className="flex gap-2 mb-2">
-          <input
-            type="url"
-            placeholder="Add image URL"
-            value={newImageUrl}
-            onChange={(e) => setNewImageUrl(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleImageUrlAdd(newImageUrl);
-                setNewImageUrl("");
-              }
-            }}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
-          />
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              handleImageUrlAdd(newImageUrl);
-              setNewImageUrl("");
-            }}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Add
-          </button>
-        </div>
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleGalleryChange}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
+        />
         {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
         <div className="flex flex-wrap gap-2">
-          {imageUrls.map((url, index) => (
+          {currentImages.map((url, index) => (
             <div key={index} className="relative">
               <img
                 src={url}
@@ -449,13 +497,11 @@ export default function ProductForm({
                   (e.target as HTMLImageElement).style.display = "none";
                 }}
               />
-              <button
-                type="button"
-                onClick={() => handleImageRemove(index)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
-              >
-                ×
-              </button>
+            </div>
+          ))}
+          {galleryFiles.map((file, index) => (
+            <div key={`${file.name}-${index}`} className="px-2 py-1 text-xs bg-gray-100 rounded-lg text-gray-700">
+              {file.name}
             </div>
           ))}
         </div>
@@ -477,7 +523,13 @@ export default function ProductForm({
           className="px-6 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
         >
           {loading && <LoadingSpinner size="sm" />}
-          {product ? "Update Product" : "Create Product"}
+          {product
+            ? isGift
+              ? "Update Gift"
+              : "Update Product"
+            : isGift
+              ? "Create Gift"
+              : "Create Product"}
         </button>
       </div>
     </form>

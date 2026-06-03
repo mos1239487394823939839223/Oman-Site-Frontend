@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Heart from "./Heart";
 import { FaShoppingCart, FaStar } from "react-icons/fa";
 import { Product } from "@/services/clientApi";
+import { resolveMediaUrl } from "@/lib/media";
 import { useTranslation } from "react-i18next";
 
 interface ProductCardProps {
@@ -14,6 +16,7 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  const [imgSrc, setImgSrc] = useState(resolveMediaUrl(product.imageCover, "products"));
 
   const handleViewDetails = () => {
     router.push(`/products/${product._id}`);
@@ -33,13 +36,12 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <div
       onClick={handleViewDetails}
-      className="group flex flex-col bg-white rounded-2xl overflow-hidden cursor-pointer border border-gray-100 hover:border-[#5a1832]/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-sm"
-      style={{ minHeight: "420px" }}
+      className="group flex flex-col min-h-[360px] sm:min-h-[420px] bg-white rounded-2xl overflow-hidden cursor-pointer border border-gray-100 hover:border-[#5a1832]/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-sm"
     >
       {/* Image Section */}
-      <div className="relative w-full bg-gray-100" style={{ height: "240px" }}>
+      <div className="relative w-full bg-gray-100 aspect-[4/3]">
         <Image
-          src={product.imageCover || "/placeholder.svg"}
+          src={imgSrc}
           alt={product.title}
           fill
           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
@@ -47,6 +49,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           loading="lazy"
           placeholder="blur"
           blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+          onError={() => setImgSrc("/placeholder.svg")}
         />
 
         {/* Discount Badge */}
@@ -60,7 +63,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="absolute top-3 right-3 z-10">
           <Heart
             productId={product._id}
-            className="w-9 h-9 bg-[#1a1f2e]/80 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/10"
+            className="w-11 h-11 bg-[#1a1f2e]/80 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/10"
             size="sm"
           />
         </div>

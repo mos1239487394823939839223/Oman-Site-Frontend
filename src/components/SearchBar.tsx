@@ -93,11 +93,17 @@ export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
           <input
-            type="text"
+            type="search"
             value={query}
             onChange={handleInputChange}
             onFocus={handleInputFocus}
             placeholder={displayPlaceholder}
+            inputMode="search"
+            enterKeyHint="search"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck={false}
             className="w-full px-6 py-4 pl-14 pr-14 text-[#0F2137] font-medium bg-white border border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-4 focus:ring-maroon-main/10 focus:border-maroon-main placeholder:text-gray-400 transition-all"
           />
           
@@ -120,7 +126,7 @@ export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
             type="submit"
             className="absolute inset-y-0 right-0 flex items-center pr-3"
           >
-            <div className="bg-maroon-main hover:bg-maroon-dark text-white p-2.5 rounded-xl transition-all shadow-md">
+            <div className="bg-maroon-main hover:bg-maroon-dark text-white w-11 h-11 rounded-xl transition-all shadow-md flex items-center justify-center active:scale-95">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -131,7 +137,7 @@ export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
 
       {/* Suggestions Dropdown */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[60vh] md:max-h-80 overflow-y-auto">
           {suggestions.map((product) => (
             <div
               key={product._id}
@@ -142,6 +148,7 @@ export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
                 src={product.imageCover}
                 alt={product.title}
                 className="w-12 h-12 object-cover rounded-md mr-3"
+                onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
               />
               <div className="flex-1">
                 <h4 className="text-sm font-semibold text-[#0F2137] line-clamp-1">

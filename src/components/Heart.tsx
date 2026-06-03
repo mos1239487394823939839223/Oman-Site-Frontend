@@ -60,7 +60,7 @@ export default function Heart({ productId, className = "", size = 'md' }: HeartP
     <button
       onClick={handleClick}
       disabled={loading}
-      className={`group p-2.5 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg border border-gray-100 transition-all duration-300 ${
+      className={`group p-3 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg border border-gray-100 transition-all duration-300 ${
         loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110 cursor-pointer active:scale-90'
       } ${className}`}
       title={active ? t('wishlist.removeFromWishlist') : t('wishlist.addToWishlist')}

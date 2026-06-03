@@ -4,7 +4,7 @@ import { Metadata } from "next";
 import { getSeoLanguage, getSeoText } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const seo = getSeoText(getSeoLanguage());
+  const seo = getSeoText(await getSeoLanguage());
 
   return {
     title: seo.loginTitle,

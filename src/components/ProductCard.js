@@ -1,1 +1,2 @@
-// Overwritten in favor of ProductCard.tsx to prevent duplicate symbol declaration.
+// Re-export from TypeScript implementation to avoid empty-module resolution issues.
+export { default } from './ProductCard.tsx';

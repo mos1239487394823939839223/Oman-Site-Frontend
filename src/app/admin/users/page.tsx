@@ -57,10 +57,15 @@ function UsersManagementContent() {
       setFormLoading(true);
       
       if (editingUser) {
-        // Update existing user
-        await adminApi.updateUser(editingUser._id, data);
+        const { password, ...userData } = data;
+        await adminApi.updateUser(editingUser._id, userData);
+        if (password) {
+          await adminApi.changeUserPassword(editingUser._id, {
+            password,
+            rePassword: password,
+          });
+        }
       } else {
-        // Create new user
         if (!data.password) {
           throw new Error("Password is required for new users");
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "./AuthProvider";
 import { useCart } from "./CartProvider";
 import {
@@ -39,6 +39,8 @@ export default function Header() {
 
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV_ITEMS);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Load from localStorage (dynamic config from admin dashboard)
   useEffect(() => {
@@ -49,6 +51,32 @@ export default function Header() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!userMenuRef.current) return;
+      if (!userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setUserMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
 
   const visibleItems = useMemo(() => navItems.filter(i => i.visible), [navItems]);
 
@@ -108,15 +136,21 @@ export default function Header() {
         {/* Right Actions */}
         <div className="flex items-center gap-4">
           {/* User Dropdown */}
-          <div className="relative group">
+          <div ref={userMenuRef} className="relative group">
             <button 
               className="w-11 h-11 bg-white/5 rounded-lg flex items-center justify-center text-white opacity-90 hover:opacity-100 hover:bg-white/10 transition-all duration-300 border border-white/5"
               aria-haspopup="true"
-              aria-expanded="false"
+              aria-expanded={userMenuOpen}
+              onClick={() => setUserMenuOpen((open) => !open)}
             >
               <FaUser className="text-lg" />
             </button>
-            <div className="absolute right-0 top-full mt-3 w-56 bg-[#5C2E3A] rounded-2xl shadow-2xl py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-2 group-hover:translate-y-0 z-[100] border border-white/10 overflow-hidden">
+            <div
+              className={`absolute right-0 top-full mt-3 w-56 bg-[#5C2E3A] rounded-2xl shadow-2xl py-3 transition-all duration-300 z-[100] border border-white/10 overflow-hidden
+                ${userMenuOpen ? "opacity-100 visible translate-y-0" : "opacity-0 invisible translate-y-2"}
+                group-hover:opacity-100 group-hover:visible group-hover:translate-y-0
+              `}
+            >
               {isAuthenticated ? (
                 <>
                   <div className="px-6 py-4 border-b border-white/5 bg-black/10">
@@ -162,7 +196,7 @@ export default function Header() {
         <div className="fixed inset-0 z-[100] lg:hidden animate-in fade-in duration-300" onClick={toggleMobileMenu}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className={`absolute top-0 bottom-0 w-80 max-w-[85%] ${isAr ? 'left-0' : 'right-0'} bg-[#5a1832] p-8 shadow-2xl border-l border-white/10 animate-in slide-in-from-${isAr ? 'left' : 'right'} duration-500`}
+            className={`absolute top-0 bottom-0 w-80 max-w-[85%] ${isAr ? 'left-0' : 'right-0'} bg-[#5a1832] px-8 py-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))] shadow-2xl border-l border-white/10 animate-in slide-in-from-${isAr ? 'left' : 'right'} duration-500`}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"

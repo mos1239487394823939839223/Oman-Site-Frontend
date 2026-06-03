@@ -10,7 +10,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const language = getSeoLanguage();
+  const language = await getSeoLanguage();
   const seo = getSeoText(language);
   try {
     const response = await getProduct(id);
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   } catch {
     return {
-      title: `${seo.productTitle} | ${seo.siteName}`,
+      title: seo.productsTitle,
     };
   }
 }

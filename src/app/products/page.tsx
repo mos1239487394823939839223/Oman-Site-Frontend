@@ -2,16 +2,19 @@
 
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getProducts, searchProducts, getCategories, getSubCategories, Product, Category, Subcategory } from "@/services/clientApi";
+import { getProducts, getCategories, getSubCategories, Product, Category, Subcategory } from "@/services/clientApi";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import CategoriesBar from "@/components/CategoriesBar";
 import { FaSort, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
-import ProductCard from "@/components/ProductCard.tsx";
+import ProductCard from "@/components/ProductCard";
 
 interface ExtendedProduct extends Product {
-  subcategory?: string | string[] | { _id: string; name: string; image?: string };
+  subcategory?:
+    | string
+    | Array<string | { _id: string; name: string; image?: string }>
+    | { _id: string; name: string; image?: string };
   patternType?: string;
   isLocal?: boolean;
 }
@@ -24,6 +27,19 @@ interface SelectedCategoryViewProps {
   categories: Category[];
   onProductClick: (id: string) => void;
   onSubCategoryClick: (name: string) => void;
+}
+
+function getSubcategoryId(
+  subcategory: ExtendedProduct["subcategory"]
+): string {
+  if (!subcategory) return "";
+  if (typeof subcategory === "string") return subcategory;
+  if (Array.isArray(subcategory)) {
+    const firstItem = subcategory[0];
+    if (!firstItem) return "";
+    return typeof firstItem === "string" ? firstItem : firstItem._id || "";
+  }
+  return subcategory._id || "";
 }
 
 function SelectedCategoryView({ 
@@ -50,12 +66,7 @@ function SelectedCategoryView({
   };
 
   const getSubId = (p: ExtendedProduct): string => {
-    const sub = p.subcategory;
-    if (!sub) return '';
-    if (typeof sub === 'string') return sub;
-    if (Array.isArray(sub)) return sub[0]?._id || sub[0] || '';
-    if (typeof sub === 'object') return sub._id || '';
-    return '';
+    return getSubcategoryId(p.subcategory);
   };
 
   const filteredProducts = selectedSubCategory
@@ -326,81 +337,24 @@ function ProductsPageContent() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      let externalProducts: ExtendedProduct[] = [];
-      let localProducts: ExtendedProduct[] = [];
+      const params: Record<string, string> = {};
+      if (selectedCategory) params.category = selectedCategory;
+      if (searchQuery) params.search = searchQuery;
+      const response = await getProducts(Object.keys(params).length ? params : undefined);
+      let fetched: ExtendedProduct[] = response.data || [];
 
-      // Read hidden product IDs set by admin dashboard
-      const hiddenIds: string[] = (() => {
-        try {
-          const data = localStorage.getItem("admin_hidden_products");
-          return data ? JSON.parse(data) : [];
-        } catch { return []; }
-      })();
-
-      // Fetch local Alnaseej products
-      try {
-        const localRes = await fetch('/api/admin/products', { cache: 'no-store' });
-        const localData = await localRes.json();
-        localProducts = (localData.data || []).map((p: any) => ({
-          ...p,
-          isLocal: true,
-          category: typeof p.category === 'string'
-            ? { _id: p.category, name: 'Alnaseej', image: '' }
-            : p.category,
-          brand: typeof p.brand === 'string'
-            ? { _id: p.brand, name: 'النزيج', image: '' }
-            : p.brand,
-        }));
-
-        if (selectedCategory) {
-          localProducts = localProducts.filter(p => {
-            const pCatId = typeof p.category === 'object' ? p.category?._id : p.category;
-            return pCatId === selectedCategory;
-          });
-        }
-      } catch (e) {
-        console.warn('Could not fetch local products');
-      }
-
-      // Fetch external API products ONLY when no category is selected
-      if (!selectedCategory) {
-        try {
-          let response;
-          if (searchQuery) {
-            response = await searchProducts(searchQuery);
-          } else {
-            response = await getProducts();
-          }
-          externalProducts = response.data || [];
-        } catch (e) {
-          console.warn('Could not fetch external products');
-        }
-      }
-
-      // Merge: local first, then external
-      let merged = [...localProducts, ...externalProducts]
-        .filter(p => !hiddenIds.includes(p._id))
-        .filter((p, idx, arr) => arr.findIndex(x => x._id === p._id) === idx);
-
-      // Apply Subcategory Filter by Name
+      // Apply subcategory filter client-side
       if (selectedSubCategory) {
-        merged = merged.filter((p) => {
+        fetched = fetched.filter((p) => {
           const pSub = p.subcategory;
           if (!pSub) return false;
-
-          // Get subcategory ID safely
-          let pSubId = '';
-          if (typeof pSub === 'string') pSubId = pSub;
-          else if (Array.isArray(pSub)) pSubId = pSub[0]?._id || pSub[0] || '';
-          else if (typeof pSub === 'object') pSubId = pSub._id || '';
-
-          // Find the name of this subcategory
+          const pSubId = getSubcategoryId(pSub);
           const subObj = subCategories.find(s => s._id === pSubId);
           return subObj?.name === selectedSubCategory;
         });
       }
 
-      setProducts(merged);
+      setProducts(fetched);
       setDisplayedProducts(20);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -412,41 +366,21 @@ function ProductsPageContent() {
 
   const fetchCategories = async () => {
     try {
-      // Try to fetch from LOCAL admin API first
-      const res = await fetch('/api/admin/categories', { cache: 'no-store' });
-      if (!res.ok) throw new Error("Local API failed");
-      const data = await res.json();
-      setCategories(data.data || []);
+      const response = await getCategories();
+      setCategories(response.data || []);
     } catch (error) {
-      console.warn("Failed to fetch local categories, trying external API...", error);
-      try {
-        // Fallback to external API
-        const response = await getCategories();
-        setCategories(response.data || []);
-      } catch (externalError) {
-        console.error("Error fetching categories from both sources:", externalError);
-        setCategories([]);
-      }
+      console.error("Error fetching categories:", error);
+      setCategories([]);
     }
   };
 
   const fetchSubCategories = async () => {
     try {
-      // Try to fetch from LOCAL admin API first
-      const res = await fetch('/api/admin/subcategories', { cache: 'no-store' });
-      if (!res.ok) throw new Error("Local API failed");
-      const data = await res.json();
-      setSubCategories(data.data || []);
+      const response = await getSubCategories();
+      setSubCategories(response.data || []);
     } catch (error) {
-      console.warn("Failed to fetch local subcategories, trying external API...", error);
-      try {
-        // Fallback to external API
-        const response = await getSubCategories();
-        setSubCategories(response.data || []);
-      } catch (externalError) {
-        console.error("Error fetching subcategories from both sources:", externalError);
-        setSubCategories([]);
-      }
+      console.error("Error fetching subcategories:", error);
+      setSubCategories([]);
     }
   };
 

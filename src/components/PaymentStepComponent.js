@@ -1,1 +1,2 @@
-// Deprecated and unused legacy step component. Check src/app/payment/page.tsx instead.
+// Re-export from TypeScript implementation to avoid empty-module resolution issues.
+export { default } from './PaymentStepComponent.tsx';

@@ -7,8 +7,8 @@
   --maroon-deep: #3D1B26;
   --gold-accent: #D4AF37;
   --gold-hover: #E8C547;
-  --charcoal: #2C2C2C;
-  --body-grey: #666666;
+  --charcoal: #747373;
+  --body-grey: #c7c3c3;
   --meta-grey: #999999;
 
   --background: #F5F5F5;
@@ -62,6 +62,12 @@
   --shadow-medium: 0 4px 16px rgba(0,0,0,0.12);
   --shadow-strong: 0 8px 32px rgba(0,0,0,0.15);
   --shadow-hover: 0 12px 40px rgba(0,0,0,0.18);
+
+  /* Safe area insets (iOS) */
+  --safe-area-top: env(safe-area-inset-top);
+  --safe-area-right: env(safe-area-inset-right);
+  --safe-area-bottom: env(safe-area-inset-bottom);
+  --safe-area-left: env(safe-area-inset-left);
 }
 
 html[lang="en"] {
@@ -109,6 +115,7 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
+  padding-bottom: var(--safe-area-bottom);
 }
 
 /* Fluid Typography Hierarchy (mobile-first) */
@@ -134,6 +141,15 @@ p { color: var(--body-grey); margin: 0 0 var(--space-4) 0; line-height: 1.6; }
 /* Links & interactive */
 a { transition: color 0.25s ease, transform 0.2s ease; color: inherit; }
 a:hover { color: var(--accent); }
+
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: rgba(212, 175, 55, 0.22);
+  touch-action: manipulation;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  a:hover { color: inherit; }
+}
 
 /* Inputs & controls (mobile-first) */
 input, textarea, select {
@@ -227,6 +243,12 @@ nav a:hover *, nav button:hover * {
 /* Muted nav items use slight opacity instead of different colors */
 .nav-item-muted { opacity: 0.88; }
 .nav-item-active { opacity: 1; text-shadow: 0 6px 24px rgba(255,255,255,0.06); }
+
+/* Viewport unit fixes for mobile address bar */
+@supports (height: 100dvh) {
+  .h-screen { height: 100dvh; }
+  .min-h-screen { min-height: 100dvh; }
+}
 
 /* Small screens adjustments (mobile-first) */
 @media (min-width: 480px) {

@@ -15,6 +15,7 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams?.get("redirect");
+  const sessionExpired = searchParams?.get("session_expired") === "1";
   const { t } = useTranslation();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,6 +61,11 @@ export default function LoginForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {sessionExpired && !error && (
+              <div className="bg-amber-50 text-amber-700 p-4 rounded-2xl text-sm font-bold border border-amber-200 flex items-center gap-2">
+                <span>&#9888;</span> Your session has expired. Please log in again.
+              </div>
+            )}
             {error && (
               <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm font-bold border border-red-100 animate-in fade-in slide-in-from-top-2">
                 {error}
@@ -77,6 +83,9 @@ export default function LoginForm() {
                   required
                   value={formData.email}
                   onChange={handleChange}
+                  inputMode="email"
+                  autoComplete="email"
+                  enterKeyHint="next"
                   className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#D4AF37] transition-all font-bold text-gray-900 placeholder:text-gray-400"
                   placeholder="name@example.com"
                   aria-label={t('auth.email')}
@@ -98,6 +107,8 @@ export default function LoginForm() {
                   required
                   value={formData.password}
                   onChange={handleChange}
+                  autoComplete="current-password"
+                  enterKeyHint="go"
                   className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#D4AF37] transition-all font-bold text-gray-900 placeholder:text-gray-400"
                   placeholder="••••••••"
                   aria-label={t('auth.password')}

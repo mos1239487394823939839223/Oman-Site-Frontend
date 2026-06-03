@@ -17,6 +17,7 @@ export default function ProductsManagementPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -33,13 +34,15 @@ export default function ProductsManagementPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [localRes, catsRes, subCatsRes] = await Promise.all([
+      const [localRes, catsRes, brandsRes, subCatsRes] = await Promise.all([
         adminApi.getAllProducts().catch(() => ({ data: [] })),
         adminApi.getAllCategories().catch(() => getCategories()),
+        adminApi.getAllBrands().catch(() => getBrands()),
         adminApi.getAllSubcategories().catch(() => ({ data: [] })),
       ]);
       setProducts(localRes?.data || []);
       setCategories(catsRes?.data || []);
+      setBrands(brandsRes?.data || []);
       setSubcategories(subCatsRes?.data || []);
     } catch {
       toast.error("Load Error", "Failed to load products");
@@ -121,7 +124,7 @@ export default function ProductsManagementPage() {
                   <FaTimes className="w-4 h-4" />
                 </button>
               </div>
-              <ProductForm product={editingProduct || undefined} categories={categories} subcategories={subcategories}
+              <ProductForm product={editingProduct || undefined} categories={categories} subcategories={subcategories} brands={brands}
                 onSubmit={handleFormSubmit} onCancel={() => { setShowForm(false); setEditingProduct(null); }}
                 loading={formLoading} />
             </div>

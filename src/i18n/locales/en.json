@@ -44,6 +44,23 @@
       "accessories": "Traditional Accessories"
     }
   },
+  "reviews": {
+    "sectionTitle": "Customer Reviews",
+    "noReviews": "No reviews yet. Be the first to share your experience!",
+    "writeReview": "Write a Review",
+    "editReview": "Edit Your Review",
+    "yourRating": "Your Rating",
+    "titlePlaceholder": "Summary (optional)",
+    "commentPlaceholder": "Share your experience with this product...",
+    "submit": "Submit Review",
+    "update": "Update Review",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loginToReview": "Please log in to write a review",
+    "successSubmit": "Review submitted successfully!",
+    "successDelete": "Review deleted.",
+    "verified": "Verified Purchase"
+  },
   "common": {
     "language": "Language",
     "arabic": "Arabic",

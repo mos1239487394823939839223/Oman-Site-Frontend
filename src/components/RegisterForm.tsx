@@ -47,6 +47,7 @@ export default function RegisterForm() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        passwordConfirm: formData.rePassword,
         phone: formData.phone
       });
       router.push("/");
@@ -93,6 +94,8 @@ export default function RegisterForm() {
                     required
                     value={formData.name}
                     onChange={handleChange}
+                    autoComplete="name"
+                    enterKeyHint="next"
                     className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#D4AF37] transition-all font-bold text-gray-900"
                     placeholder="الاسم الثلاثي"
                     aria-label={t('auth.fullName')}
@@ -111,6 +114,9 @@ export default function RegisterForm() {
                     required
                     value={formData.phone}
                     onChange={handleChange}
+                    inputMode="tel"
+                    autoComplete="tel"
+                    enterKeyHint="next"
                     className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#D4AF37] transition-all font-bold text-gray-900"
                     placeholder="9xxxxxxx"
                     aria-label={t('auth.phone')}
@@ -130,6 +136,9 @@ export default function RegisterForm() {
                   required
                   value={formData.email}
                   onChange={handleChange}
+                  inputMode="email"
+                  autoComplete="email"
+                  enterKeyHint="next"
                   className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#D4AF37] transition-all font-bold text-gray-900"
                   placeholder="name@example.com"
                     aria-label={t('auth.email')}
@@ -149,6 +158,8 @@ export default function RegisterForm() {
                     required
                     value={formData.password}
                     onChange={handleChange}
+                    autoComplete="new-password"
+                    enterKeyHint="next"
                     className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#D4AF37] transition-all font-bold text-gray-900"
                     placeholder="••••••••"
                     aria-label={t('auth.password')}
@@ -167,6 +178,8 @@ export default function RegisterForm() {
                     required
                     value={formData.rePassword}
                     onChange={handleChange}
+                    autoComplete="new-password"
+                    enterKeyHint="go"
                     className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#D4AF37] transition-all font-bold text-gray-900"
                     placeholder="••••••••"
                     aria-label={t('auth.confirmPassword')}

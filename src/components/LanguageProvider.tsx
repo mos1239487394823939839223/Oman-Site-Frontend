@@ -47,7 +47,17 @@ function readInitialLanguage(fallback: AppLanguage = "ar"): AppLanguage {
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
-  const [language, setLanguageState] = useState<AppLanguage>(() => readInitialLanguage());
+  // Always start with "ar" so server and client initial renders match (avoids hydration mismatch).
+  // After mount, update to the user's stored preference.
+  const [language, setLanguageState] = useState<AppLanguage>("ar");
+
+  useEffect(() => {
+    const stored = readInitialLanguage("ar");
+    if (stored !== language) {
+      setLanguageState(stored);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once after mount
 
   useEffect(() => {
     if (i18n.language !== language) {

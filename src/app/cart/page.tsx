@@ -7,6 +7,7 @@ import { FaTrashAlt, FaPlus, FaMinus, FaArrowLeft, FaShoppingCart, FaCity, FaPho
 import { useTranslation } from "react-i18next";
 import { createCashOrder, getCart } from "@/services/clientApi";
 import { useLanguage } from "@/components/LanguageProvider";
+import { resolveMediaUrl } from "@/lib/media";
 
 type Step = 'cart' | 'checkout' | 'success';
 
@@ -217,23 +218,23 @@ export default function CartPage() {
 
             <div className="space-y-3">
               {cartItems.map(item => (
-                <div key={item.product._id} className="bg-white rounded-2xl border border-gray-200 p-4 flex gap-4 items-center shadow-sm hover:shadow-md transition-shadow">
+                <div key={item._id} className="bg-white rounded-2xl border border-gray-200 p-4 flex gap-4 items-center shadow-sm hover:shadow-md transition-shadow">
                   <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100">
-                    <img src={item.product.imageCover} alt={item.product.title} className="w-full h-full object-contain p-1" />
+                    <img src={resolveMediaUrl((item.product as any).imageCover || (item.product as any).image, (item as any).gift ? "gifts" : "products")} alt={(item.product as any).title || (item.product as any).name} className="w-full h-full object-contain p-1" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-black text-[#1F2937] truncate">{item.product.title}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{item.product.description}</p>
+                    <h3 className="font-black text-[#1F2937] truncate">{(item.product as any).title || (item.product as any).name}</h3>
+                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{(item.product as any).description}</p>
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 border border-gray-200">
-                        <button onClick={() => handleUpdateQuantity(item.product._id, item.count - 1)} disabled={item.count <= 1} className="w-7 h-7 rounded-lg bg-white shadow flex items-center justify-center text-gray-600 hover:text-[#5C2E3A] disabled:opacity-40 transition-colors"><FaMinus size={8} /></button>
-                        <span className="w-8 text-center font-black text-sm">{item.count}</span>
-                        <button onClick={() => handleUpdateQuantity(item.product._id, item.count + 1)} className="w-7 h-7 rounded-lg bg-white shadow flex items-center justify-center text-gray-600 hover:text-[#5C2E3A] transition-colors"><FaPlus size={8} /></button>
+                        <button onClick={() => handleUpdateQuantity(item._id, item.count - 1)} disabled={item.count <= 1} className="w-11 h-11 rounded-lg bg-white shadow flex items-center justify-center text-gray-600 hover:text-[#5C2E3A] disabled:opacity-40 transition-colors"><FaMinus size={10} /></button>
+                        <span className="w-10 text-center font-black text-sm">{item.count}</span>
+                        <button onClick={() => handleUpdateQuantity(item._id, item.count + 1)} className="w-11 h-11 rounded-lg bg-white shadow flex items-center justify-center text-gray-600 hover:text-[#5C2E3A] transition-colors"><FaPlus size={10} /></button>
                       </div>
                       <span className="font-black text-[#5C2E3A]">{item.price.toLocaleString()} <span className="text-xs text-[#D4AF37]">ر.ع</span></span>
                     </div>
                   </div>
-                  <button onClick={() => handleRemove(item.product._id)} className="w-9 h-9 rounded-xl bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center shrink-0 transition-colors"><FaTrashAlt size={12} /></button>
+                  <button onClick={() => handleRemove(item._id)} className="w-11 h-11 rounded-xl bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center shrink-0 transition-colors"><FaTrashAlt size={14} /></button>
                 </div>
               ))}
             </div>
@@ -279,15 +280,15 @@ export default function CartPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="relative">
                         <FaCity className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
-                        <input type="text" name="city" value={shippingAddress.city} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.cityPlaceholder')} />
+                        <input type="text" name="city" value={shippingAddress.city} onChange={handleInput} autoComplete="address-level2" enterKeyHint="next" className={inputCls + " pl-11"} placeholder={t('cart.cityPlaceholder')} />
                       </div>
                       <div className="relative">
                         <FaPhoneAlt className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
-                        <input type="tel" name="phone" value={shippingAddress.phone} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.phonePlaceholder')} />
+                        <input type="tel" name="phone" value={shippingAddress.phone} onChange={handleInput} inputMode="tel" autoComplete="tel" enterKeyHint="next" className={inputCls + " pl-11"} placeholder={t('cart.phonePlaceholder')} />
                       </div>
                       <div className="relative sm:col-span-2">
                         <FaMapMarkerAlt className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
-                        <input type="text" name="details" value={shippingAddress.details} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.addressPlaceholder')} />
+                        <input type="text" name="details" value={shippingAddress.details} onChange={handleInput} autoComplete="street-address" enterKeyHint="next" className={inputCls + " pl-11"} placeholder={t('cart.addressPlaceholder')} />
                       </div>
                     </div>
                   </div>
@@ -300,11 +301,11 @@ export default function CartPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="relative">
                         <svg className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400" width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path d="M10 10a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 1114 0H3z"/></svg>
-                        <input type="text" name="name" value={shippingAddress.name} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.namePlaceholder')} />
+                        <input type="text" name="name" value={shippingAddress.name} onChange={handleInput} autoComplete="name" enterKeyHint="next" className={inputCls + " pl-11"} placeholder={t('cart.namePlaceholder')} />
                       </div>
                       <div className="relative">
                         <FaPhoneAlt className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
-                        <input type="tel" name="phone" value={shippingAddress.phone} onChange={handleInput} className={inputCls + " pl-11"} placeholder={t('cart.phonePlaceholder')} />
+                        <input type="tel" name="phone" value={shippingAddress.phone} onChange={handleInput} inputMode="tel" autoComplete="tel" enterKeyHint="next" className={inputCls + " pl-11"} placeholder={t('cart.phonePlaceholder')} />
                       </div>
                     </div>
                   </div>

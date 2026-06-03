@@ -1,5 +1,46 @@
 
-export const API_BASE = "https://ecommerce.routemisr.com/api/v1";
+export const API_BASE =
+  typeof window === "undefined"
+    ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1")
+    : "";
+
+function clearStoredAuth() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+}
+
+function handleSessionExpiry() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.href = `/login?session_expired=1&redirect=${redirect}`;
+}
+
+async function fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (typeof window === "undefined") {
+    return globalThis.fetch(input, init);
+  }
+
+  const url = typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+
+  if (/^https?:\/\//i.test(url)) {
+    return globalThis.fetch(input, init);
+  }
+
+  const headers = new Headers(init?.headers);
+  headers.set("x-api-request", "1");
+
+  return globalThis.fetch(input, {
+    ...init,
+    headers,
+  });
+}
 
 export interface Product {
   _id: string;
@@ -7,6 +48,7 @@ export interface Product {
   description: string;
   price: number;
   priceAfterDiscount?: number;
+  couponCode?: string;
   imageCover: string;
   images: string[];
   category: {
@@ -23,6 +65,8 @@ export interface Product {
   ratingsQuantity: number;
   sold: number;
   quantity: number;
+  bestSeller?: boolean;
+  isRecommended?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,7 +113,8 @@ export interface User {
 
 export interface CartItem {
   _id: string;
-  product: Product;
+  product?: Product;
+  gift?: Product;
   count: number;
   price: number;
   createdAt: string;
@@ -77,16 +122,32 @@ export interface CartItem {
 }
 
 
-export async function getProducts() {
-  const res = await fetch(`/api/admin/products`, { cache: 'no-store' });
+export async function getProducts(params?: Record<string, string>) {
+  const query = params ? '?' + new URLSearchParams(params).toString() : '';
+  const res = await fetch(`${API_BASE}/products${query}`, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch products");
   return res.json();
 }
 
 export async function getProduct(productId: string) {
-  const res = await fetch(`/api/admin/products/${productId}`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/products/${productId}`, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch product");
   return res.json();
+}
+
+export async function getGift(giftId: string) {
+  const res = await fetch(`${API_BASE}/gifts/${giftId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch gift");
+  return res.json();
+}
+
+/** Fetch product first, then gift — gifts share the same response shape */
+export async function getProductOrGift(id: string) {
+  try {
+    return await getProduct(id);
+  } catch {
+    return await getGift(id);
+  }
 }
 
 export async function getProductsByCategory(categoryId: string) {
@@ -109,7 +170,7 @@ export async function searchProducts(query: string) {
 
 
 export async function getCategories() {
-  const res = await fetch(`/api/admin/categories`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/categories`, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch categories");
   return res.json();
 }
@@ -128,37 +189,22 @@ export async function getSubCategories() {
 }
 
 export async function getBanners() {
-  try {
-    const res = await fetch(`${API_BASE}/banners`);
-    if (!res.ok) {
-      throw new Error("Failed to fetch banners");
-    }
-    return res.json();
-  } catch (error) {
-    return {
-      status: "success",
-      data: [
-        {
-          _id: "1",
-          name: "Luxury Mussar Collection",
-          image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=1200&h=600&fit=crop",
-          link: "/products"
-        },
-        {
-          _id: "2", 
-          name: "Premium Omani Dishdasha",
-          image: "https://images.unsplash.com/photo-1516762689617-e1cffcef479d?w=1200&h=600&fit=crop",
-          link: "/products"
-        },
-        {
-          _id: "3",
-          name: "Handmade Shal & Accessories",
-          image: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=1200&h=600&fit=crop",
-          link: "/products"
-        }
-      ]
-    };
-  }
+  const res = await fetch(`${API_BASE}/banners`, { cache: 'no-store' });
+  if (!res.ok) throw new Error("Failed to fetch banners");
+  return res.json();
+}
+
+export async function getFooter() {
+  const res = await fetch(`${API_BASE}/footer`, { cache: 'no-store' });
+  if (!res.ok) throw new Error("Failed to fetch footer settings");
+  return res.json();
+}
+
+export async function getGifts(params?: Record<string, string>) {
+  const query = params ? "?" + new URLSearchParams(params).toString() : "";
+  const res = await fetch(`${API_BASE}/gifts${query}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch gifts");
+  return res.json();
 }
 
 export async function getSubCategory(subCategoryId: string) {
@@ -185,13 +231,19 @@ export async function signup(data: {
   name: string;
   email: string;
   password: string;
-  rePassword: string;
+  passwordConfirm: string;
   phone: string;
 }) {
   const res = await fetch(`${API_BASE}/auth/signup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      name: data.name,
+      email: data.email,
+      password: data.password,
+      passwordConfirm: data.passwordConfirm,
+      phone: data.phone,
+    }),
   });
   
   if (!res.ok) {
@@ -208,22 +260,17 @@ export async function signup(data: {
           errorData = { raw: errorText };
         }
       }
-    } catch (parseError) {
-      console.error('Error reading response:', parseError);
+    } catch {
+      // Keep raw text if response body is unreadable
     }
-    
-    console.error('Signup error:', {
-      status: res.status,
-      statusText: res.statusText,
-      errorData: errorData || {},
-      errorText: errorText || 'No error text',
-      url: res.url
-    });
     
     if (res.status === 409) {
       throw new Error("Email already exists. Please use a different email or try logging in.");
     } else if (res.status === 400) {
-      throw new Error("Invalid data. Please check your information and try again.");
+      const validationMsg = Array.isArray(errorData?.error)
+        ? errorData.error.map((e: { msg?: string }) => e.msg).filter(Boolean).join('. ')
+        : null;
+      throw new Error(validationMsg || errorData?.message || "Invalid data. Please check your information and try again.");
     } else if (res.status === 404) {
       throw new Error("Registration service not found. Please try again later.");
     } else if (res.status === 500) {
@@ -238,7 +285,7 @@ export async function signup(data: {
 }
 
 export async function signin(data: { email: string; password: string }) {
-  const res = await fetch(`${API_BASE}/auth/signin`, {
+  const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -258,19 +305,9 @@ export async function signin(data: { email: string; password: string }) {
           errorData = { raw: errorText };
         }
       }
-    } catch (parseError) {
-      console.error('Error reading response:', parseError);
+    } catch {
+      // Keep raw text if response body is unreadable
     }
-    
-    const errorMessage = errorData?.message || errorData?.errors?.[0]?.msg || errorText || res.statusText || 'Unknown error';
-    
-    console.error(`Signin error (${res.status}): ${errorMessage}`, {
-      status: res.status,
-      statusText: res.statusText,
-      errorData: errorData,
-      errorText: errorText,
-      url: res.url
-    });
     
     if (res.status === 401) {
       throw new Error("Invalid email or password. Please check your credentials and try again.");
@@ -290,7 +327,7 @@ export async function signin(data: { email: string; password: string }) {
 }
 
 export async function forgotPassword(email: string) {
-  const res = await fetch(`${API_BASE}/auth/forgotPasswords`, {
+  const res = await fetch(`${API_BASE}/auth/forgetPassword`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -298,12 +335,6 @@ export async function forgotPassword(email: string) {
   
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    console.error('Forgot password error:', {
-      status: res.status,
-      statusText: res.statusText,
-      errorData
-    });
-    
     if (res.status === 404) {
       throw new Error("Email not found. Please check your email address and try again.");
     } else if (res.status === 400) {
@@ -325,12 +356,6 @@ export async function verifyResetCode(resetCode: string) {
   
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    console.error('Verify reset code error:', {
-      status: res.status,
-      statusText: res.statusText,
-      errorData
-    });
-    
     if (res.status === 400) {
       throw new Error("Invalid reset code. Please check the code and try again.");
     } else if (res.status === 404) {
@@ -358,10 +383,26 @@ export async function addToWishlist(productId: string, token: string) {
 }
 
 export async function getWishlist(token: string) {
+  if (token && token.startsWith('local_admin_token_')) {
+    return {
+      status: "success",
+      data: []
+    };
+  }
+
   const res = await fetch(`${API_BASE}/wishlist`, { 
     headers: { "Authorization": `Bearer ${token}` } 
   });
-  if (!res.ok) throw new Error("Failed to fetch wishlist");
+
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      handleSessionExpiry();
+      return { status: "success", data: [] };
+    }
+    console.warn(`getWishlist: API returned ${res.status} - returning empty wishlist`);
+    return { status: "success", data: [] };
+  }
+
   return res.json();
 }
 
@@ -414,7 +455,11 @@ export async function removeAddress(addressId: string, token: string) {
 }
 
 
-export async function addToCart(productId: string, token: string) {
+export async function addToCart(
+  itemId: string,
+  token: string,
+  options?: { isGift?: boolean }
+) {
   try {
     // Check if token is a local admin token (mock token)
     if (token && token.startsWith('local_admin_token_')) {
@@ -425,29 +470,27 @@ export async function addToCart(productId: string, token: string) {
       };
     }
 
+    const body = options?.isGift
+      ? { giftId: itemId }
+      : { productId: itemId };
 
-    
     const res = await fetch(`${API_BASE}/cart`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json", 
         "Authorization": `Bearer ${token}` 
       },
-      body: JSON.stringify({ productId }),
+      body: JSON.stringify(body),
     });
     
 
     
     if (!res.ok) {
       if (res.status === 401) {
-        console.warn("addToCart: Authentication failed - returning success for localStorage fallback");
-        return {
-          status: "success",
-          message: "Product added to local cart"
-        };
+        handleSessionExpiry();
+        throw new Error('Session expired. Please log in again.');
       } else {
-        console.error(`addToCart: API error: ${res.status} ${res.statusText}`);
-        throw new Error(`Failed to add product to cart: ${res.status} ${res.statusText}`);
+        throw new Error(`Failed to add item to cart: ${res.status} ${res.statusText}`);
       }
     }
     
@@ -455,10 +498,7 @@ export async function addToCart(productId: string, token: string) {
 
     return data;
   } catch (error) {
-    console.error('addToCart: Error occurred:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
+    if (error instanceof Error) throw error;
     throw new Error("Network error. Please check your connection.");
   }
 }
@@ -483,22 +523,17 @@ export async function getCart(token: string) {
 
     
     if (!res.ok) {
-      if (res.status === 401) {
-        console.warn("getCart: Authentication failed for cart API call - returning empty cart");
-        // Instead of throwing error, return empty cart data
-        return {
-          status: "success",
-          data: []
-        };
+      if (res.status === 401 || res.status === 403) {
+        handleSessionExpiry();
+        return { status: "success", data: { cartItems: [], totalCartPrice: 0 } };
       } else if (res.status === 404) {
-        console.warn("getCart: Cart not found - returning empty cart");
         return {
           status: "success", 
-          data: []
+          data: { cartItems: [], totalCartPrice: 0 }
         };
       } else {
-        console.error(`getCart: API error: ${res.status} ${res.statusText}`);
-        throw new Error(`Failed to fetch cart: ${res.status} ${res.statusText}`);
+        console.warn(`getCart: API returned ${res.status} - returning empty cart`);
+        return { status: "success", data: { cartItems: [], totalCartPrice: 0 } };
       }
     }
     
@@ -506,10 +541,7 @@ export async function getCart(token: string) {
 
     return data;
   } catch (error) {
-    console.error('getCart: Error occurred:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
+    if (error instanceof Error) throw error;
     throw new Error("Network error. Please check your connection.");
   }
 }
@@ -524,20 +556,16 @@ export async function updateCartItem(productId: string, count: number, token: st
         "Content-Type": "application/json", 
         "Authorization": `Bearer ${token}` 
       },
-      body: JSON.stringify({ count }),
+      body: JSON.stringify({ quantity: count }),
     });
     
 
     
     if (!res.ok) {
       if (res.status === 401) {
-        console.warn("updateCartItem: Authentication failed - returning success for localStorage fallback");
-        return {
-          status: "success",
-          message: "Cart item updated in local cart"
-        };
+        handleSessionExpiry();
+        throw new Error('Session expired. Please log in again.');
       } else {
-        console.error(`updateCartItem: API error: ${res.status} ${res.statusText}`);
         throw new Error(`Failed to update cart item: ${res.status} ${res.statusText}`);
       }
     }
@@ -546,10 +574,7 @@ export async function updateCartItem(productId: string, count: number, token: st
 
     return data;
   } catch (error) {
-    console.error('updateCartItem: Error occurred:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
+    if (error instanceof Error) throw error;
     throw new Error("Network error. Please check your connection.");
   }
 }
@@ -567,13 +592,9 @@ export async function removeCartItem(productId: string, token: string) {
     
     if (!res.ok) {
       if (res.status === 401) {
-        console.warn("removeCartItem: Authentication failed - returning success for localStorage fallback");
-        return {
-          status: "success",
-          message: "Item removed from local cart"
-        };
+        handleSessionExpiry();
+        throw new Error('Session expired. Please log in again.');
       } else {
-        console.error(`removeCartItem: API error: ${res.status} ${res.statusText}`);
         throw new Error(`Failed to remove item from cart: ${res.status} ${res.statusText}`);
       }
     }
@@ -582,10 +603,7 @@ export async function removeCartItem(productId: string, token: string) {
 
     return data;
   } catch (error) {
-    console.error('removeCartItem: Error occurred:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
+    if (error instanceof Error) throw error;
     throw new Error("Network error. Please check your connection.");
   }
 }
@@ -603,13 +621,9 @@ export async function clearCart(token: string) {
     
     if (!res.ok) {
       if (res.status === 401) {
-        console.warn("clearCart: Authentication failed - returning success for localStorage fallback");
-        return {
-          status: "success",
-          message: "Cart cleared in local storage"
-        };
+        handleSessionExpiry();
+        throw new Error('Session expired. Please log in again.');
       } else {
-        console.error(`clearCart: API error: ${res.status} ${res.statusText}`);
         throw new Error(`Failed to clear cart: ${res.status} ${res.statusText}`);
       }
     }
@@ -618,10 +632,7 @@ export async function clearCart(token: string) {
 
     return data;
   } catch (error) {
-    console.error('clearCart: Error occurred:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
+    if (error instanceof Error) throw error;
     throw new Error("Network error. Please check your connection.");
   }
 }
@@ -688,22 +699,13 @@ export async function createCheckoutSession(cartId: string, data: any, token: st
         // Silently fail parse
       }
       
-      console.error('createCheckoutSession: API error:', {
-        status: res.status,
-        statusText: res.statusText,
-        errorData,
-        url: res.url
-      });
       throw new Error(`Failed to create checkout session: ${res.status} ${res.statusText}`);
     }
     
     const responseData = await res.json();
     return responseData;
   } catch (error) {
-    console.error('createCheckoutSession: Error occurred:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
+    if (error instanceof Error) throw error;
     throw new Error("Network error. Please check your connection.");
   }
 }
@@ -792,3 +794,137 @@ export async function createMockVisaOrder(cartId: string, paymentData: {
     }
   };
 }
+
+// ─── User Profile ────────────────────────────────────────────────────────────
+
+export async function getMe(token: string) {
+  const res = await fetch(`${API_BASE}/users/getMe`, {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to fetch profile");
+  return res.json();
+}
+
+export async function updateMyData(data: any, token: string) {
+  const isFormData = data instanceof FormData;
+  const res = await fetch(`${API_BASE}/users/updateMyData`, {
+    method: "PUT",
+    headers: {
+      ...(!isFormData ? { "Content-Type": "application/json" } : {}),
+      "Authorization": `Bearer ${token}`,
+    },
+    body: isFormData ? data : JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update profile");
+  return res.json();
+}
+
+export async function changeMyPassword(data: { currentPassword: string; password: string; rePassword: string }, token: string) {
+  const res = await fetch(`${API_BASE}/users/changeMyPassword`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to change password");
+  return res.json();
+}
+
+export async function deactivateMyAccount(token: string) {
+  const res = await fetch(`${API_BASE}/users/deactivateMyAccount`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to deactivate account");
+  return res.json();
+}
+
+// ─── Auth – Reset Password ────────────────────────────────────────────────────
+
+export async function resetPassword(email: string, newPassword: string) {
+  const res = await fetch(`${API_BASE}/auth/resetPassword`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, newPassword }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to reset password");
+  }
+  return res.json();
+}
+
+// ─── Reviews ─────────────────────────────────────────────────────────────────
+
+export async function getReviews() {
+  const res = await fetch(`${API_BASE}/reviews`);
+  if (!res.ok) throw new Error("Failed to fetch reviews");
+  return res.json();
+}
+
+export async function getProductReviews(productId: string) {
+  const res = await fetch(`${API_BASE}/products/${productId}/reviews`);
+  if (!res.ok) throw new Error("Failed to fetch product reviews");
+  return res.json();
+}
+
+export async function createReview(productId: string, data: { rating: number; title?: string }, token: string) {
+  const res = await fetch(`${API_BASE}/products/${productId}/reviews`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create review");
+  return res.json();
+}
+
+export async function updateReview(reviewId: string, data: { rating?: number; title?: string }, token: string) {
+  const res = await fetch(`${API_BASE}/reviews/${reviewId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update review");
+  return res.json();
+}
+
+export async function deleteReview(reviewId: string, token: string) {
+  const res = await fetch(`${API_BASE}/reviews/${reviewId}`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to delete review");
+  return res.json();
+}
+
+// ─── Cart – Apply Coupon ──────────────────────────────────────────────────────
+
+export async function applyCoupon(coupon: string, token: string) {
+  const res = await fetch(`${API_BASE}/cart/applyCoupon`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ coupon }),
+  });
+  if (!res.ok) throw new Error("Failed to apply coupon");
+  return res.json();
+}
+
+// ─── Subcategories by Category ────────────────────────────────────────────────
+
+export async function getSubcategoriesByCategory(categoryId: string) {
+  const res = await fetch(`${API_BASE}/categories/${categoryId}/subcategories`);
+  if (!res.ok) throw new Error("Failed to fetch subcategories for category");
+  return res.json();
+}
+

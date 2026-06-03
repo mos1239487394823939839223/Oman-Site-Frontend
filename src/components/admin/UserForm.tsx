@@ -96,25 +96,29 @@ export default function UserForm({
       return;
     }
 
-    const submitData: {
-      name: string;
-      email: string;
-      password?: string;
-      phone: string;
-      role: string;
-    } = {
-      name: formData.name.trim(),
-      email: formData.email.trim().toLowerCase(),
-      phone: formData.phone.trim(),
-      role: formData.role,
-    };
+    const isEdit = !!user;
+    const origName = user?.name || "";
+    const origEmail = user?.email || "";
+    const origPhone = user?.phone || "";
+    const origRole = user?.role || "user";
 
-    // Only include password if it's provided (required for new users)
+    const submitData: Record<string, string> = {};
+
+    if (!isEdit || formData.name.trim() !== origName)
+      submitData.name = formData.name.trim();
+    if (!isEdit || formData.email.trim().toLowerCase() !== origEmail.toLowerCase())
+      submitData.email = formData.email.trim().toLowerCase();
+    if (!isEdit || formData.phone.trim() !== origPhone)
+      submitData.phone = formData.phone.trim();
+    if (!isEdit || formData.role !== origRole)
+      submitData.role = formData.role;
+
+    // Only include password if provided
     if (formData.password || !user) {
       submitData.password = formData.password;
     }
 
-    await onSubmit(submitData);
+    await onSubmit(submitData as any);
   };
 
   return (
@@ -220,10 +224,11 @@ export default function UserForm({
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="user">User</option>
+          <option value="manager">Manager</option>
           <option value="admin">Admin</option>
         </select>
         <p className="mt-1 text-xs text-gray-500">
-          Select "Admin" to create an administrator account
+          Backend roles are user, manager, and admin
         </p>
       </div>
 

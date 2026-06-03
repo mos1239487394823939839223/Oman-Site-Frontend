@@ -11,11 +11,15 @@ import styles from "./CheckoutPage.module.css";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, cartTotal, clearCart } = useCart();
+  const { cartItems, cartTotal, cartTotalAfterDiscount, applyCoupon, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
   const [mounted, setMounted] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [couponSuccess, setCouponSuccess] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
   
   const [formData, setFormData] = useState({
     details: "",
@@ -37,6 +41,29 @@ export default function CheckoutPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleApplyCoupon = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const code = couponCode.trim();
+    if (!code) {
+      setCouponError("يرجى إدخال كود الخصم أولاً");
+      setCouponSuccess("");
+      return;
+    }
+
+    setApplyingCoupon(true);
+    setCouponError("");
+    setCouponSuccess("");
+
+    try {
+      await applyCoupon(code);
+      setCouponSuccess("تم تطبيق الكوبون بنجاح");
+    } catch (error: any) {
+      setCouponError(error?.message || "تعذر تطبيق الكوبون");
+    } finally {
+      setApplyingCoupon(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,6 +126,10 @@ export default function CheckoutPage() {
     );
   }
 
+  const hasDiscount = typeof cartTotalAfterDiscount === "number" && cartTotalAfterDiscount < cartTotal;
+  const finalTotal = hasDiscount ? cartTotalAfterDiscount : cartTotal;
+  const discountValue = hasDiscount ? (cartTotal - cartTotalAfterDiscount) : 0;
+
   return (
     <div className={styles.container}>
       <div className="max-w-6xl mx-auto px-4">
@@ -132,6 +163,8 @@ export default function CheckoutPage() {
                       value={formData.details}
                       onChange={handleInputChange}
                       placeholder="اسم الشارع، رقم البناية، الشقة"
+                      autoComplete="street-address"
+                      enterKeyHint="next"
                       className={styles.inputField + " pl-12"}
                       required
                     />
@@ -149,6 +182,9 @@ export default function CheckoutPage() {
                         value={formData.phone}
                         onChange={handleInputChange}
                         placeholder="00968XXXXXXX"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        enterKeyHint="next"
                         className={styles.inputField + " pl-12"}
                         required
                       />
@@ -164,6 +200,8 @@ export default function CheckoutPage() {
                         value={formData.city}
                         onChange={handleInputChange}
                         placeholder="مسقط"
+                        autoComplete="address-level2"
+                        enterKeyHint="next"
                         className={styles.inputField + " pl-12"}
                         required
                       />
@@ -181,6 +219,9 @@ export default function CheckoutPage() {
                       value={formData.postalCode}
                       onChange={handleInputChange}
                       placeholder="12345"
+                      inputMode="numeric"
+                      autoComplete="postal-code"
+                      enterKeyHint="done"
                       className={styles.inputField + " pl-12"}
                     />
                   </div>
@@ -253,18 +294,50 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
+              <form onSubmit={handleApplyCoupon} className="mt-2 mb-6">
+                <div className="flex items-center gap-3 bg-gray-50/70 border border-gray-100 rounded-2xl p-3">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="أدخل كود الخصم"
+                    className="flex-1 bg-transparent outline-none font-bold text-sm text-gray-700 placeholder:text-gray-400"
+                    aria-label="كود الخصم"
+                  />
+                  <button
+                    type="submit"
+                    disabled={applyingCoupon}
+                    className="px-4 py-2 rounded-xl bg-[#5a1832] text-white text-xs font-black hover:bg-[#4a1429] transition-colors disabled:opacity-60"
+                  >
+                    {applyingCoupon ? "...جارٍ" : "تطبيق"}
+                  </button>
+                </div>
+                {couponError && (
+                  <p className="mt-2 text-xs font-bold text-red-600">{couponError}</p>
+                )}
+                {couponSuccess && (
+                  <p className="mt-2 text-xs font-bold text-emerald-600">{couponSuccess}</p>
+                )}
+              </form>
+
               <div className={styles.totalBox}>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-white/70 font-bold">المجموع الفرعي</span>
                   <span className="font-black text-white">{cartTotal} ر.ع</span>
                 </div>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-2">
                   <span className="text-white/70 font-bold">الشحن والتوصيل</span>
                   <span className="text-[#D4AF37] font-black">مجاني</span>
                 </div>
+                {hasDiscount && (
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white/70 font-bold">الخصم</span>
+                    <span className="font-black text-emerald-200">- {discountValue} ر.ع</span>
+                  </div>
+                )}
                 <div className="pt-4 border-t border-white/20 flex justify-between items-center">
                   <span className="text-white font-black text-lg">الإجمالي النهائي</span>
-                  <span className="text-[#D4AF37] font-black text-2xl">{cartTotal} ر.ع</span>
+                  <span className="text-[#D4AF37] font-black text-2xl">{finalTotal} ر.ع</span>
                 </div>
               </div>
 

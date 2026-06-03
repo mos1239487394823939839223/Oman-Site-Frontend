@@ -1,1 +1,2 @@
-// Overwritten in favor of WishlistProvider.tsx to prevent duplicate symbol declaration.
+// Re-export from TypeScript implementation to avoid empty-module resolution issues.
+export { WishlistProvider, useWishlist } from './WishlistProvider.tsx';

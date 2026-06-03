@@ -8,6 +8,8 @@ import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/components/LanguageProvider";
+import { getGifts } from "@/services/clientApi";
+import { resolveMediaUrl } from "@/lib/media";
 
 export default function GiftsPage() {
   const [gifts, setGifts] = useState<any[]>([]);
@@ -26,8 +28,7 @@ export default function GiftsPage() {
   const fetchGifts = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/gifts', { cache: 'no-store' });
-      const data = await res.json();
+      const data = await getGifts();
       setGifts(data.data || []);
     } catch (error) {
       console.error("Error fetching gifts:", error);
@@ -43,7 +44,7 @@ export default function GiftsPage() {
       return;
     }
     try {
-      await addToCart(gift._id, 1);
+      await addToCart(gift._id, 1, undefined, { isGift: true });
       // Show success notification
       const notification = document.createElement('div');
       notification.className = 'fixed top-4 right-4 bg-[#5a1832] text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300';
@@ -59,8 +60,8 @@ export default function GiftsPage() {
   };
 
   const filteredGifts = useMemo(() => {
-    return gifts.filter(gift =>
-      gift.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    return gifts.filter((gift) =>
+      gift.title?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [gifts, searchQuery]);
 
@@ -111,14 +112,14 @@ export default function GiftsPage() {
             {filteredGifts.map((gift) => (
               <div
                 key={gift._id}
-                onClick={() => gift.link && router.push(gift.link)}
-                className={`group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-[2.5rem] overflow-hidden transition-all duration-500 hover:-translate-y-3 hover:shadow-2xl hover:border-[#D4AF37]/30 hover:bg-white/10 ${gift.link ? 'cursor-pointer' : ''}`}
+                onClick={() => router.push(`/gifts/${gift._id}`)}
+                className="group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-[2.5rem] overflow-hidden transition-all duration-500 hover:-translate-y-3 hover:shadow-2xl hover:border-[#D4AF37]/30 hover:bg-white/10 cursor-pointer"
               >
                 {/* Image */}
                 <div className="relative h-72 overflow-hidden bg-white/5">
                   <Image
-                    src={gift.image || '/placeholder.svg'}
-                    alt={gift.name}
+                    src={resolveMediaUrl(gift.imageCover, "gifts")}
+                    alt={gift.title}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover object-top transition-transform duration-700 group-hover:scale-110"
@@ -134,7 +135,7 @@ export default function GiftsPage() {
                 <div className="p-6 text-center space-y-4">
                   <div>
                     <h3 className="text-xl font-black text-white group-hover:text-[#D4AF37] transition-colors duration-300">
-                      {gift.name}
+                      {gift.title}
                     </h3>
                     <p className="text-gray-400 text-sm mt-2 line-clamp-2 h-10">{gift.description || t('home.checkBackLater')}</p>
                   </div>
@@ -142,7 +143,10 @@ export default function GiftsPage() {
                   <div className="flex flex-col gap-3">
                     <div className="text-[#D4AF37] font-black text-lg">0.00 د.ع</div>
                     <button 
-                      onClick={() => handleAddGiftToCart(gift)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddGiftToCart(gift);
+                      }}
                       className="w-full bg-[#5a1832] hover:bg-[#4A2330] text-white py-3 rounded-2xl font-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
                     >
                       <FaShoppingCart size={14} />

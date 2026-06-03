@@ -44,6 +44,23 @@
       "accessories": "إكسسوارات تقليدية"
     }
   },
+  "reviews": {
+    "sectionTitle": "آراء العملاء",
+    "noReviews": "لا توجد تقييمات بعد. كن أول من يشارك تجربته!",
+    "writeReview": "اكتب تقييماً",
+    "editReview": "تعديل تقييمك",
+    "yourRating": "تقييمك",
+    "titlePlaceholder": "ملخص (اختياري)",
+    "commentPlaceholder": "شاركنا تجربتك مع هذا المنتج...",
+    "submit": "إرسال التقييم",
+    "update": "تحديث التقييم",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "loginToReview": "يرجى تسجيل الدخول لكتابة تقييم",
+    "successSubmit": "تم إرسال التقييم بنجاح!",
+    "successDelete": "تم حذف التقييم.",
+    "verified": "عملية شراء مؤكدة"
+  },
   "common": {
     "language": "اللغة",
     "arabic": "العربية",

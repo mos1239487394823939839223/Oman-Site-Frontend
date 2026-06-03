@@ -27,11 +27,12 @@ const SEO_TEXT = {
   },
 } as const;
 
-export function getSeoLanguage(): SeoLanguage {
-  const language = cookies().get("app_language")?.value;
+export async function getSeoLanguage(): Promise<SeoLanguage> {
+  const cookieStore = await cookies();
+  const language = cookieStore.get("app_language")?.value;
   return language === "en" ? "en" : "ar";
 }
 
-export function getSeoText(language: SeoLanguage = getSeoLanguage()) {
+export function getSeoText(language: SeoLanguage) {
   return SEO_TEXT[language];
 }

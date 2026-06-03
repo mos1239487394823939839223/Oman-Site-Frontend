@@ -49,12 +49,16 @@ function CategoriesContent() {
 
   const handleDelete = async () => {
     if (!deleting) return;
-    try {
-      await adminApi.deleteCategory(deleting._id);
-      toast.success("Deleted", `"${deleting.name}" removed`);
-      fetchData();
-    } catch { toast.error("Failed to delete"); }
+    const target = deleting;
     setDeleting(null);
+    try {
+      await adminApi.deleteCategory(target._id);
+      setCategories(prev => prev.filter(c => c._id !== target._id));
+      toast.success("Deleted", `"${target.name}" removed`);
+    } catch (e: any) {
+      toast.error("Failed to delete", e.message);
+      fetchData(); // re-sync on failure so the list is accurate
+    }
   };
 
   const filtered = categories.filter(c => !search || c.name?.toLowerCase().includes(search.toLowerCase()));

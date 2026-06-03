@@ -27,7 +27,7 @@ export default function BestSellersManagementPage() {
       const res = await adminApi.getAllProducts().catch(() => ({ data: [] }));
       const products = res?.data || [];
       setAllProducts(products);
-      setBestSellingProducts(products.filter((p: any) => p.isRecommended));
+      setBestSellingProducts(products.filter((p: any) => p.bestSeller));
     } catch {
       toast.error("Load Error", "Failed to load products");
     } finally {
@@ -37,15 +37,15 @@ export default function BestSellersManagementPage() {
 
   const toggleBestSeller = async (product: any) => {
     try {
-      const newState = !product.isRecommended;
-      await adminApi.updateProduct(product._id, { isRecommended: newState });
-      
+      const newState = !product.bestSeller;
+      await adminApi.updateProduct(product._id, { bestSeller: newState });
+
       // Update local states
-      const updatedAll = allProducts.map(p => 
-        p._id === product._id ? { ...p, isRecommended: newState } : p
+      const updatedAll = allProducts.map((p: any) =>
+        p._id === product._id ? { ...p, bestSeller: newState } : p
       );
       setAllProducts(updatedAll);
-      setBestSellingProducts(updatedAll.filter(p => p.isRecommended));
+      setBestSellingProducts(updatedAll.filter((p: any) => p.bestSeller));
       
       toast.success(
         newState ? "Added" : "Removed",
@@ -57,7 +57,7 @@ export default function BestSellersManagementPage() {
   };
 
   const searchResults = search.trim() === "" ? [] : allProducts.filter(p => 
-    !p.isRecommended && p.title?.toLowerCase().includes(search.toLowerCase())
+    !p.bestSeller && p.title?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (

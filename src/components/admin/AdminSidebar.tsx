@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   FaTachometerAlt, FaBox, FaShoppingBag, FaUsers, FaTags,
   FaStar, FaTimes, FaLayerGroup, FaImages, FaGlobe,
-  FaPhoneAlt, FaConciergeBell, FaBars, FaStore, FaQuoteLeft,
+  FaConciergeBell, FaBars, FaStore,
   FaLanguage, FaChevronDown, FaChevronRight, FaGift
 } from "react-icons/fa";
 import { useState } from "react";
@@ -47,6 +47,7 @@ const menuGroups: Array<{
     items: [
       { nameKey: "admin.sidebar.orders", href: "/admin/orders", icon: FaShoppingBag },
       { nameKey: "admin.sidebar.users", href: "/admin/users", icon: FaUsers },
+      { nameKey: "admin.sidebar.reviews", href: "/admin/reviews", icon: FaStar },
     ]
   },
   {
@@ -54,8 +55,6 @@ const menuGroups: Array<{
     items: [
       { nameKey: "admin.sidebar.banners", href: "/admin/banners", icon: FaImages },
       { nameKey: "admin.sidebar.services", href: "/admin/services", icon: FaConciergeBell },
-      { nameKey: "admin.sidebar.testimonials", href: "/admin/testimonials", icon: FaQuoteLeft },
-      { nameKey: "admin.sidebar.contactInfo", href: "/admin/contact", icon: FaPhoneAlt },
     ]
   },
   {
@@ -63,7 +62,7 @@ const menuGroups: Array<{
     items: [
       { nameKey: "admin.sidebar.navbar", href: "/admin/navbar", icon: FaBars },
       { nameKey: "admin.sidebar.translations", href: "/admin/translations", icon: FaLanguage },
-      { nameKey: "admin.sidebar.siteSettings", href: "/admin/settings", icon: FaGlobe },
+      { nameKey: "admin.sidebar.siteSettings", href: "/admin/footer", icon: FaGlobe },
     ]
   },
 

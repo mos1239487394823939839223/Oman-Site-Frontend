@@ -1,14 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { signin, signup, forgotPassword, verifyResetCode, User } from '@/services/clientApi';
-import { checkLocalAdminCredentials, getLocalAdminUser, generateLocalAdminToken } from '@/services/localAuth';
+import { signin, signup, forgotPassword, verifyResetCode, resetPassword as apiResetPassword, User } from '@/services/clientApi';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: { name: string; email: string; password: string; phone?: string }) => Promise<void>;
+  register: (userData: { name: string; email: string; password: string; passwordConfirm: string; phone?: string }) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   verifyResetCode: (resetCode: string) => Promise<void>;
@@ -26,13 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
+
     if (token && userData) {
       try {
-        const currentUser = JSON.parse(userData);
-        setUser(currentUser);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
+        setUser(JSON.parse(userData));
+      } catch {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
@@ -40,175 +37,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setUser(null);
     }
-    
+
     setLoading(false);
   }, []);
 
-  const isAuthenticated = () => {
-    if (typeof window === 'undefined') return false;
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    const result = !!(token && userData && user);
-    return result;
-  };
-
   const getIsAuthenticated = () => {
     if (typeof window === 'undefined') return false;
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    return !!(token && userData && user);
+    return !!(localStorage.getItem('token') && localStorage.getItem('user') && user);
   };
 
   const checkTokenValidity = () => {
     if (typeof window === 'undefined') return false;
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    return !!(token && userData);
+    return !!(localStorage.getItem('token') && localStorage.getItem('user'));
   };
 
   const login = async (email: string, password: string) => {
-    try {
-      // Check local admin credentials first
-      if (checkLocalAdminCredentials(email, password)) {
-        console.log('AuthProvider: Using local admin credentials');
-        const user = getLocalAdminUser();
-        const token = generateLocalAdminToken();
-        
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        setUser(user);
-        return;
-      }
-      
-      // Try local user login first
-      try {
-        const localLoginResponse = await fetch('/api/auth/local/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
+    const response = await signin({ email, password });
 
-        if (localLoginResponse.ok) {
-          const localData = await localLoginResponse.json();
-          if (localData.status === 'success' && localData.data?.user && localData.data?.token) {
-            localStorage.setItem('token', localData.data.token);
-            localStorage.setItem('user', JSON.stringify(localData.data.user));
-            setUser(localData.data.user);
-            return;
-          }
-        }
-      } catch (localError) {
-        console.log('AuthProvider: Local login failed, trying external API');
-      }
-      
-      // If not local user, try external API login
-      const response = await signin({ email, password });
-      
-      let user, token;
-      
-      if (response && response.data) {
-        user = response.data.user;
-        token = response.data.token;
-      } else if (response && response.user) {
-        user = response.user;
-        token = response.token;
-      } else if (response && response.data && response.data.data) {
-        user = response.data.data.user;
-        token = response.data.data.token;
-      } else {
-        console.error('AuthProvider: Unexpected response structure:', response);
-        throw new Error('Invalid response structure from server');
-      }
-      
-      if (user && token) {
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        setUser(user);
-      } else {
-        console.error('AuthProvider: Missing user or token in response');
-        throw new Error('Invalid response from server - missing user or token');
-      }
-    } catch (error) {
-      console.error('AuthProvider: Login error:', error);
-      throw error;
+    // Handle all common backend response shapes:
+    //  { token, data: { user } }  — most Express backends
+    //  { data: { token, user } }
+    //  { token, user }             — flat shape
+    const userData =
+      response?.data?.user ??
+      response?.user ??
+      null;
+
+    const token =
+      response?.token ??
+      response?.data?.token ??
+      null;
+
+    if (!token) {
+      throw new Error('Login failed: server did not return an authentication token.');
     }
+    if (!userData) {
+      throw new Error('Login failed: server did not return user data.');
+    }
+
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
   };
 
-  const register = async (userData: { name: string; email: string; password: string; phone?: string }) => {
-    try {
-      // Try local registration first
-      try {
-        const localRegisterResponse = await fetch('/api/auth/local/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: userData.name,
-            email: userData.email,
-            password: userData.password,
-            phone: userData.phone || '',
-            role: 'user' // New registrations are always users
-          }),
-        });
+  const register = async (userData: { name: string; email: string; password: string; passwordConfirm: string; phone?: string }) => {
+    const response = await signup({
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      passwordConfirm: userData.passwordConfirm,
+      phone: userData.phone || '',
+    });
 
-        if (localRegisterResponse.ok) {
-          const localData = await localRegisterResponse.json();
-          if (localData.status === 'success' && localData.data?.user && localData.data?.token) {
-            localStorage.setItem('token', localData.data.token);
-            localStorage.setItem('user', JSON.stringify(localData.data.user));
-            setUser(localData.data.user);
-            return;
-          }
-        } else {
-          // If local registration fails, parse error
-          const errorData = await localRegisterResponse.json();
-          throw new Error(errorData.error || 'Registration failed');
-        }
-      } catch (localError: any) {
-        // If it's an email exists error or validation error, throw it
-        if (localError.message && (localError.message.includes('already exists') || localError.message.includes('required'))) {
-          throw localError;
-        }
-        // Otherwise, fall through to external API
-        console.log('AuthProvider: Local registration failed, trying external API');
-      }
-      
-      // Fallback to external API registration
-      const response = await signup({
-        name: userData.name,
-        email: userData.email,
-        password: userData.password,
-        rePassword: userData.password,
-        phone: userData.phone || ''
-      });
-      
-      let user, token;
-      
-      if (response && response.data) {
-        user = response.data.user;
-        token = response.data.token;
-      } else if (response && response.user) {
-        user = response.user;
-        token = response.token;
-      } else if (response && response.data && response.data.data) {
-        user = response.data.data.user;
-        token = response.data.data.token;
-      } else {
-        console.error('AuthProvider: Unexpected response structure:', response);
-        throw new Error('Invalid response structure from server');
-      }
-      
-      if (user && token) {
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        setUser(user);
-      } else {
-        console.error('AuthProvider: Missing user or token in response');
-        throw new Error('Invalid response from server - missing user or token');
-      }
-    } catch (error) {
-      console.error('AuthProvider: Registration error:', error);
-      throw error;
+    const newUser = response?.data?.user ?? response?.user ?? null;
+    const token = response?.data?.token ?? response?.token ?? null;
+
+    if (!newUser || !token) {
+      throw new Error('Invalid response from server – missing user or token');
     }
+
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(newUser));
+    setUser(newUser);
   };
 
   const logout = () => {
@@ -218,27 +108,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleForgotPassword = async (email: string) => {
-    try {
-      await forgotPassword(email);
-    } catch (error) {
-      throw error;
-    }
+    await forgotPassword(email);
   };
 
   const handleVerifyResetCode = async (resetCode: string) => {
-    try {
-      await verifyResetCode(resetCode);
-    } catch (error) {
-      throw error;
-    }
+    await verifyResetCode(resetCode);
   };
 
-  const resetPassword = async (email: string, newPassword: string) => {
-    try {
-      throw new Error('Reset password API not implemented yet');
-    } catch (error) {
-      throw error;
-    }
+  const handleResetPassword = async (email: string, newPassword: string) => {
+    await apiResetPassword(email, newPassword);
   };
 
   return (
@@ -250,9 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       forgotPassword: handleForgotPassword,
       verifyResetCode: handleVerifyResetCode,
-      resetPassword,
+      resetPassword: handleResetPassword,
       checkTokenValidity,
-      loading
+      loading,
     }}>
       {children}
     </AuthContext.Provider>

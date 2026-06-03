@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Product, Category } from "@/services/clientApi";
+import { Product, Category, getProducts, getCategories } from "@/services/clientApi";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { FaStar, FaShoppingCart, FaUserCircle } from "react-icons/fa";
@@ -12,6 +12,7 @@ import Slider from "@/components/Slider";
 import SearchBar from "@/components/SearchBar";
 import CategoriesBar from "@/components/CategoriesBar";
 import Heart from "@/components/Heart";
+import { resolveMediaUrl } from "@/lib/media";
 
 export default function HomePageContent() {
   const router = useRouter();
@@ -28,47 +29,18 @@ export default function HomePageContent() {
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
 
   const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const hiddenIds: string[] = (() => {
-        try {
-          const data = localStorage.getItem("admin_hidden_products");
-          return data ? JSON.parse(data) : [];
-        } catch { return []; }
-      })();
-
-      let localProducts: Product[] = [];
-      try {
-        const localRes = await fetch('/api/admin/products', { cache: 'no-store' });
-        const localData = await localRes.json();
-        localProducts = (localData.data || []).map((p: any) => ({
-          ...p, isLocal: true,
-          category: typeof p.category === 'string' ? { _id: p.category, name: 'Watani', image: '' } : p.category,
-          brand: typeof p.brand === 'string' ? { _id: p.brand, name: 'وطني', image: '' } : p.brand,
-        })).filter((p: any) => !hiddenIds.includes(p._id));
-      } catch { }
-
-      setAllProducts(localProducts);
-
-      let filtered = localProducts;
-      if (selectedCategory) {
-        filtered = localProducts.filter((p: any) => {
-          const catId = typeof p.category === 'object' ? p.category?._id : p.category;
-          return catId === selectedCategory;
-        });
-      }
-
-      if (searchQuery) {
-        filtered = filtered.filter((p: any) =>
-          p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      }
-
-      setProducts(filtered);
-      setRecommendedProducts(localProducts.filter((p: any) => p.isRecommended));
+      const params: Record<string, string> = {};
+      if (selectedCategory) params.category = selectedCategory;
+      if (searchQuery) params.search = searchQuery;
+      const response = await getProducts(Object.keys(params).length ? params : undefined);
+      const allProds: Product[] = response.data || [];
+      setAllProducts(allProds);
+      setProducts(allProds);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -76,12 +48,23 @@ export default function HomePageContent() {
     }
   };
 
+  const fetchBestSellers = async () => {
+    try {
+      // Fetch with backend filter; also apply client-side filter as safety net
+      // in case ApiFeatures doesn't cast string 'true' → boolean true
+      const response = await getProducts({ bestSeller: 'true', limit: '100' });
+      const all: Product[] = response.data || [];
+      setRecommendedProducts(all.filter((p: any) => p.bestSeller === true));
+    } catch (error) {
+      console.error('Error fetching best sellers:', error);
+    }
+  };
+
   const fetchCategories = async () => {
     try {
       setCategoriesLoading(true);
-      const res = await fetch('/api/admin/categories', { cache: 'no-store' });
-      const data = await res.json();
-      setCategories(data.data || []);
+      const response = await getCategories();
+      setCategories(response.data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
     } finally {
@@ -97,6 +80,7 @@ export default function HomePageContent() {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    fetchBestSellers();
   }, []);
 
   useEffect(() => {
@@ -104,6 +88,10 @@ export default function HomePageContent() {
   }, [searchQuery, selectedCategory]);
 
   const handleAddToCart = async (productId: string) => {
+    if (!isAuthenticated) {
+      router.push(`/login?redirect=/`);
+      return;
+    }
     try {
       await addToCart(productId);
       const notification = document.createElement('div');
@@ -120,7 +108,7 @@ export default function HomePageContent() {
   };
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-16">
       <section className="max-w-7xl mx-auto px-4 py-6">
         <Slider />
       </section>
@@ -145,13 +133,13 @@ export default function HomePageContent() {
       </section>
 
       {/* Categories Grid */}
-      <section className="py-20">
+      <section className="py-12 sm:py-16 lg:py-20">
         <div className="max-w-7xl mx-auto px-4">
 
           {categoriesLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
               {Array(6).fill(0).map((_, i) => (
-                <div key={i} className="h-[450px] bg-gray-100 rounded-[3rem] animate-pulse" />
+                <div key={i} className="h-[300px] sm:h-[360px] lg:h-[450px] bg-gray-100 rounded-[2rem] sm:rounded-[3rem] animate-pulse" />
               ))}
             </div>
           ) : (
@@ -160,12 +148,13 @@ export default function HomePageContent() {
                 <div
                   key={category._id}
                   onClick={() => router.push(`/products?category=${category._id}`)}
-                  className="group relative h-[500px] bg-white rounded-[3rem] overflow-hidden cursor-pointer shadow-2xl transition-all duration-700 hover:-translate-y-4 hover:shadow-[#5a1832]/10"
+                  className="group relative h-[320px] sm:h-[400px] lg:h-[500px] bg-white rounded-[2rem] sm:rounded-[3rem] overflow-hidden cursor-pointer shadow-2xl transition-all duration-700 hover:-translate-y-4 hover:shadow-[#5a1832]/10"
                 >
                   <Image
-                    src={category.image || '/placeholder.svg'}
+                    src={resolveMediaUrl(category.image, "categories")}
                     alt={category.name}
                     fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover object-top transition-transform duration-1000 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#5a1832] via-transparent to-transparent opacity-80" />
@@ -181,12 +170,12 @@ export default function HomePageContent() {
       </section>
 
       {/* Featured Section */}
-      <section className="max-w-7xl mx-auto px-4 py-20">
-        <div className="bg-[#5a1832] rounded-[4rem] overflow-hidden shadow-2xl">
-          <div className="p-10 md:p-20">
+      <section className="max-w-7xl mx-auto px-4 py-12 sm:py-16 lg:py-20">
+        <div className="bg-[#5a1832] rounded-[2.5rem] sm:rounded-[3.5rem] overflow-hidden shadow-2xl">
+          <div className="p-6 sm:p-10 md:p-16 lg:p-20">
             <div className="text-center mb-16">
               <span className="bg-white/10 text-[#D4AF37] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 inline-block border border-white/10">{t('home.newCollection')}</span>
-              <h2 className="text-4xl md:text-7xl font-black text-white !important mb-6" style={{ color: 'white' }}>{t('home.bestSellers')}</h2>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white !important mb-6" style={{ color: 'white' }}>{t('home.bestSellers')}</h2>
               <div className="w-24 h-2 bg-[#D4AF37] mx-auto rounded-full"></div>
             </div>
 
@@ -198,12 +187,14 @@ export default function HomePageContent() {
                     onClick={() => router.push(`/products/${product._id}`)}
                     className="bg-white rounded-[2.5rem] p-6 shadow-xl group transition-all duration-500 hover:-translate-y-2 cursor-pointer"
                   >
-                    <div className="relative h-64 mb-6 rounded-3xl overflow-hidden bg-gray-50">
+                    <div className="relative h-52 sm:h-60 md:h-64 mb-6 rounded-3xl overflow-hidden bg-gray-50">
                       <Image
-                        src={product.imageCover || '/placeholder.svg'}
+                        src={resolveMediaUrl(product.imageCover, "products")}
                         alt={product.title}
                         fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
                         className="object-contain p-6 transition-transform duration-700 group-hover:scale-110"
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
                       />
                       <div className="absolute top-4 right-4 z-10">
                         <Heart productId={product._id} />
@@ -233,18 +224,18 @@ export default function HomePageContent() {
             <div className="text-center mt-16">
               <button
                 onClick={() => router.push('/products')}
-                className="bg-white text-[#5a1832] px-12 py-5 rounded-full font-black text-lg hover:bg-[#D4AF37] transition-all shadow-xl active:scale-95"
+                className="bg-white text-[#5a1832] px-10 sm:px-12 py-4 sm:py-5 rounded-full font-black text-lg hover:bg-[#D4AF37] transition-all shadow-xl active:scale-95"
               >
                 {t('home.browseAllProducts')}
               </button>
             </div>
           </div>
 
-          <div className="bg-[#D4AF37] p-16 md:p-24 text-center">
-            <h2 className="text-4xl md:text-7xl font-black text-[#5a1832] mb-8 tracking-tighter">{t('home.startYourJourney')}</h2>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <button onClick={() => router.push('/register')} className="bg-[#5a1832] text-white px-12 py-5 rounded-full font-black text-xl hover:bg-black transition-all shadow-2xl">{t('home.createNewAccount')}</button>
-              <button onClick={() => router.push('/login')} className="bg-white/20 border-2 border-[#5a1832] text-[#5a1832] px-12 py-5 rounded-full font-black text-xl hover:bg-white/40 transition-all">{t('home.signIn')}</button>
+          <div className="bg-[#D4AF37] p-10 sm:p-14 md:p-20 text-center">
+            <h2 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-[#5a1832] mb-8 tracking-tighter">{t('home.startYourJourney')}</h2>
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
+              <button onClick={() => router.push('/register')} className="bg-[#5a1832] text-white px-10 sm:px-12 py-4 sm:py-5 rounded-full font-black text-lg sm:text-xl hover:bg-black transition-all shadow-2xl">{t('home.createNewAccount')}</button>
+              <button onClick={() => router.push('/login')} className="bg-white/20 border-2 border-[#5a1832] text-[#5a1832] px-10 sm:px-12 py-4 sm:py-5 rounded-full font-black text-lg sm:text-xl hover:bg-white/40 transition-all">{t('home.signIn')}</button>
             </div>
           </div>
         </div>

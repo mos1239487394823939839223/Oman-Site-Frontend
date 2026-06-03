@@ -14,10 +14,7 @@ interface SubcategoryFormProps {
 }
 interface FormData {
   name: string;
-  image: string;
   category: string;
-  parent?: string;
-  slug?: string;
 }
 
 export default function SubcategoryForm({
@@ -30,10 +27,7 @@ export default function SubcategoryForm({
 }: SubcategoryFormProps) {
   const [formData, setFormData] = useState<FormData>({
     name: "",
-    image: "",
     category: "",
-    parent: "",
-    slug: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,12 +36,9 @@ export default function SubcategoryForm({
     if (subcategory) {
       setFormData({
         name: subcategory.name || "",
-        image: subcategory.image || "",
         category: typeof subcategory.category === "string"
           ? subcategory.category
           : (subcategory.category as any)?._id || "",
-        parent: (subcategory as any).parent || "",
-        slug: subcategory.slug || "",
       });
     }
   }, [subcategory]);
@@ -59,10 +50,6 @@ export default function SubcategoryForm({
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      // Auto-generate slug from name
-      ...(name === "name" && {
-        slug: value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
-      }),
     }));
     // Clear error for this field
     if (errors[name]) {
@@ -77,10 +64,6 @@ export default function SubcategoryForm({
       newErrors.name = "Subcategory name is required";
     }
 
-    if (!formData.image.trim()) {
-      newErrors.image = "Subcategory image URL is required";
-    }
-
     if (!formData.category) {
       newErrors.category = "Category is required";
     }
@@ -93,7 +76,17 @@ export default function SubcategoryForm({
     e.preventDefault();
     if (!validate()) return;
 
-    await onSubmit(formData);
+    const isEdit = !!subcategory;
+    const origName = subcategory?.name || "";
+    const origCategory = typeof subcategory?.category === "string"
+      ? subcategory.category
+      : (subcategory?.category as any)?._id || "";
+
+    const data: Record<string, string> = {};
+    if (!isEdit || formData.name.trim() !== origName) data.name = formData.name.trim();
+    if (!isEdit || formData.category !== origCategory) data.category = formData.category;
+
+    await onSubmit(data as any);
   };
 
   return (
@@ -138,34 +131,6 @@ export default function SubcategoryForm({
         </select>
         {errors.category && (
           <p className="mt-1 text-sm text-red-600">{errors.category}</p>
-        )}
-      </div>
-
-      {/* Image */}
-      <div>
-        <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
-          Subcategory Image URL *
-        </label>
-        <input
-          type="url"
-          id="image"
-          name="image"
-          value={formData.image}
-          onChange={handleChange}
-          placeholder="https://example.com/subcategory-image.jpg"
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.image ? "border-red-500" : "border-gray-300"
-            }`}
-        />
-        {errors.image && <p className="mt-1 text-sm text-red-600">{errors.image}</p>}
-        {formData.image && (
-          <img
-            src={formData.image}
-            alt="Subcategory preview"
-            className="mt-2 w-32 h-32 object-cover rounded-lg border border-gray-300"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
         )}
       </div>
 
