@@ -24,6 +24,8 @@ interface CartContextType {
   cartCount: number;
   cartTotal: number;
   cartTotalAfterDiscount?: number;
+  /** The coupon code currently applied (uppercase), or null if none. */
+  appliedCoupon: string | null;
   addToCart: (
     itemId: string,
     quantity?: number,
@@ -33,7 +35,8 @@ interface CartContextType {
   removeFromCart: (itemId: string) => Promise<void>;
   updateCartItem: (itemId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
-  applyCoupon: (coupon: string) => Promise<void>;
+  applyCoupon: (coupon: string) => Promise<{ discount: number }>;
+  removeCoupon: () => void;
   refreshCart: () => Promise<void>;
   loading: boolean;
 }
@@ -51,6 +54,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
   const [cartTotalAfterDiscount, setCartTotalAfterDiscount] = useState<number | undefined>(undefined);
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   function applyCartData(data: any) {
@@ -166,22 +170,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCartCount(0);
       setCartTotal(0);
       setCartTotalAfterDiscount(undefined);
+      setAppliedCoupon(null);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } finally {
       setLoading(false);
     }
   };
 
-  const applyCoupon = async (coupon: string) => {
+  /**
+   * Apply a coupon and return the resolved discount percentage so the UI
+   * can display it without needing to re-derive it from price maths.
+   */
+  const applyCoupon = async (coupon: string): Promise<{ discount: number }> => {
     const token = getToken();
-    if (!token) return;
+    if (!token) throw new Error('LOGIN_REQUIRED');
     try {
       setLoading(true);
       const data = await applyCouponAPI(coupon, token);
       applyCartData(data);
+      const cartData = (data?.data && !Array.isArray(data.data)) ? data.data : data;
+      const before = cartData?.totalCartPrice ?? 0;
+      const after  = cartData?.totalPriceAfterDiscount ?? before;
+      const discount = before > 0 ? Math.round(((before - after) / before) * 100) : 0;
+      setAppliedCoupon(coupon.toUpperCase());
+      return { discount };
     } finally {
       setLoading(false);
     }
+  };
+
+  /** Remove the active coupon client-side. */
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCartTotalAfterDiscount(undefined);
   };
 
   return (
@@ -190,11 +211,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       cartCount,
       cartTotal,
       cartTotalAfterDiscount,
+      appliedCoupon,
       addToCart,
       removeFromCart,
       updateCartItem,
       clearCart,
       applyCoupon,
+      removeCoupon,
       refreshCart,
       loading,
     }}>

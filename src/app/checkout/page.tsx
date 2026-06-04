@@ -5,20 +5,20 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { createCashOrder, createCheckoutSession, getCart } from "@/services/clientApi";
-import { FaTruck, FaPhone, FaMapMarkerAlt, FaPostageStamp, FaChevronLeft, FaCreditCard, FaMoneyBillWave, FaShieldAlt } from "react-icons/fa";
+import { FaTruck, FaPhone, FaMapMarkerAlt, FaPostageStamp, FaChevronLeft, FaCreditCard, FaMoneyBillWave, FaShieldAlt, FaTag, FaCheckCircle, FaTimesCircle, FaTimes } from "react-icons/fa";
 import Image from "next/image";
 import styles from "./CheckoutPage.module.css";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, cartTotal, cartTotalAfterDiscount, applyCoupon, clearCart } = useCart();
+  const { cartItems, cartTotal, cartTotalAfterDiscount, appliedCoupon, applyCoupon, removeCoupon, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
   const [mounted, setMounted] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
+  const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState("");
-  const [couponSuccess, setCouponSuccess] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState<number | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -45,25 +45,44 @@ export default function CheckoutPage() {
 
   const handleApplyCoupon = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const code = couponCode.trim();
+    const code = couponInput.trim().toUpperCase();
     if (!code) {
       setCouponError("يرجى إدخال كود الخصم أولاً");
-      setCouponSuccess("");
+      return;
+    }
+    if (code === appliedCoupon) {
+      setCouponError("هذا الكوبون مُطبَّق بالفعل");
       return;
     }
 
     setApplyingCoupon(true);
     setCouponError("");
-    setCouponSuccess("");
+    setCouponDiscount(null);
 
     try {
-      await applyCoupon(code);
-      setCouponSuccess("تم تطبيق الكوبون بنجاح");
+      const { discount } = await applyCoupon(code);
+      setCouponDiscount(discount);
+      setCouponInput("");
     } catch (error: any) {
-      setCouponError(error?.message || "تعذر تطبيق الكوبون");
+      // Surface human-readable messages for common coupon failures
+      const msg: string = error?.message || "";
+      if (/expired/i.test(msg) || /انتهت/i.test(msg)) {
+        setCouponError("هذا الكوبون منتهي الصلاحية");
+      } else if (/not found|invalid/i.test(msg)) {
+        setCouponError("كود الخصم غير صحيح أو غير موجود");
+      } else {
+        setCouponError(msg || "تعذر تطبيق الكوبون، يرجى المحاولة مجدداً");
+      }
     } finally {
       setApplyingCoupon(false);
     }
+  };
+
+  const handleRemoveCoupon = () => {
+    removeCoupon();
+    setCouponDiscount(null);
+    setCouponError("");
+    setCouponInput("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -294,31 +313,73 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              <form onSubmit={handleApplyCoupon} className="mt-2 mb-6">
-                <div className="flex items-center gap-3 bg-gray-50/70 border border-gray-100 rounded-2xl p-3">
-                  <input
-                    type="text"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    placeholder="أدخل كود الخصم"
-                    className="flex-1 bg-transparent outline-none font-bold text-sm text-gray-700 placeholder:text-gray-400"
-                    aria-label="كود الخصم"
-                  />
-                  <button
-                    type="submit"
-                    disabled={applyingCoupon}
-                    className="px-4 py-2 rounded-xl bg-[#5a1832] text-white text-xs font-black hover:bg-[#4a1429] transition-colors disabled:opacity-60"
-                  >
-                    {applyingCoupon ? "...جارٍ" : "تطبيق"}
-                  </button>
+              {/* ── Coupon Section ─────────────────────────────── */}
+              {appliedCoupon ? (
+                /* Applied coupon badge */
+                <div className="mb-6">
+                  <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
+                    <FaCheckCircle className="text-emerald-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-emerald-700 uppercase tracking-widest">كوبون مفعّل</p>
+                      <p className="font-black text-emerald-800 text-sm mt-0.5">
+                        {appliedCoupon}
+                        {couponDiscount !== null && (
+                          <span className="mr-2 text-[11px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                            خصم {couponDiscount}%
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-100 transition-colors"
+                      aria-label="إزالة الكوبون"
+                    >
+                      <FaTimes size={12} />
+                    </button>
+                  </div>
                 </div>
-                {couponError && (
-                  <p className="mt-2 text-xs font-bold text-red-600">{couponError}</p>
-                )}
-                {couponSuccess && (
-                  <p className="mt-2 text-xs font-bold text-emerald-600">{couponSuccess}</p>
-                )}
-              </form>
+              ) : (
+                /* Coupon entry form */
+                <form onSubmit={handleApplyCoupon} className="mb-6">
+                  <div className={`flex items-center gap-2 border rounded-2xl p-1.5 transition-colors ${couponError ? "border-red-300 bg-red-50/40" : "border-gray-200 bg-gray-50/70"}`}>
+                    <div className="pl-2 flex-shrink-0">
+                      <FaTag className={`text-sm ${couponError ? "text-red-400" : "text-gray-400"}`} />
+                    </div>
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => {
+                        setCouponInput(e.target.value.toUpperCase());
+                        if (couponError) setCouponError("");
+                      }}
+                      placeholder="أدخل كود الخصم"
+                      maxLength={30}
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="flex-1 bg-transparent outline-none font-bold text-sm text-gray-700 placeholder:text-gray-400 placeholder:font-medium tracking-widest uppercase"
+                      aria-label="كود الخصم"
+                    />
+                    <button
+                      type="submit"
+                      disabled={applyingCoupon || !couponInput.trim()}
+                      className="px-4 py-2 rounded-xl bg-[#5a1832] text-white text-xs font-black hover:bg-[#4a1429] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 min-w-[72px] justify-center"
+                    >
+                      {applyingCoupon ? (
+                        <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      ) : "تطبيق"}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <FaTimesCircle className="text-red-500 text-xs flex-shrink-0" />
+                      <p className="text-xs font-bold text-red-600">{couponError}</p>
+                    </div>
+                  )}
+                </form>
+              )}
 
               <div className={styles.totalBox}>
                 <div className="flex justify-between items-center mb-2">
