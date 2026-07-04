@@ -2,7 +2,7 @@
 
 :root {
   /* Brand Colors - Al Naseej Professional Design System */
-  --maroon-main: #5C2E3A;
+  --maroon-main: hwb(344 18% 64%);
   --maroon-dark: #4A2330;
   --maroon-deep: #3D1B26;
   --gold-accent: #D4AF37;
@@ -288,6 +288,24 @@ nav a:hover *, nav button:hover * {
 .no-scrollbar {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+}
+
+/* Mobile drawer + overlay motion.
+   NOTE: the `animate-in / slide-in-from-* / fade-in / zoom-in` utility classes
+   used across the app have no backing plugin installed and emit no CSS, so the
+   drawer never animated. These keyframes are plugin-free and RTL-aware. */
+@keyframes drawerFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drawerSlideFromRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes drawerSlideFromLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+.drawer-overlay { animation: drawerFade 0.25s ease both; }
+.drawer-panel-right { animation: drawerSlideFromRight 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; will-change: transform; }
+.drawer-panel-left { animation: drawerSlideFromLeft 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay,
+  .drawer-panel-right,
+  .drawer-panel-left { animation: none; }
 }
 
 

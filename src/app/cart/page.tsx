@@ -2,17 +2,17 @@
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaTrashAlt, FaPlus, FaMinus, FaArrowLeft, FaShoppingCart, FaCity, FaPhoneAlt, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaTruck, FaBoxOpen, FaGift, FaShieldAlt, FaCheck, FaCheckCircle, FaHome } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
-import { createCashOrder, getCart } from "@/services/clientApi";
+import { createCashOrder, createCheckoutSession, getCart } from "@/services/clientApi";
 import { useLanguage } from "@/components/LanguageProvider";
 import { resolveMediaUrl } from "@/lib/media";
 
 type Step = 'cart' | 'checkout' | 'success';
 
 export default function CartPage() {
-  const { cartItems, cartTotal, updateCartItem, removeFromCart, clearCart, loading } = useCart();
+  const { cartItems, cartTotal, cartTotalAfterDiscount, appliedCoupon, applyCoupon, removeCoupon, updateCartItem, removeFromCart, clearCart, loading, refreshCart } = useCart();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
@@ -20,17 +20,62 @@ export default function CartPage() {
 
   const [step, setStep] = useState<Step>('cart');
   const [savedTotal, setSavedTotal] = useState(0);
-  const [shippingAddress, setShippingAddress] = useState({ details: "", phone: "", city: "", postalCode: "", name: "" });
+  const [shippingAddress, setShippingAddress] = useState({ details: "", phone: "", city: "", postalCode: "", name: "", country: "Oman" });
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('cash');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [needsWrapping, setNeedsWrapping] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
   const [orderRef] = useState(`OMN-${Date.now().toString().slice(-6)}`);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  // Re-fetch the cart from the server on mount so items always show fully
+  // populated data (incl. product images). The add-to-cart response returns
+  // un-populated products, so without this a soft-navigation to the cart shows
+  // blank images until a hard reload.
+  useEffect(() => {
+    refreshCart();
+  }, [refreshCart]);
 
   const shippingFee = deliveryMethod === 'delivery' ? 2 : 0;
   const wrappingFee = needsWrapping ? 5 : 0;
-  const taxAmount = cartTotal * 0.05;
-  const finalTotal = cartTotal + shippingFee + taxAmount + wrappingFee;
+  // Use the coupon-discounted subtotal when a coupon is applied.
+  const hasCoupon = typeof cartTotalAfterDiscount === 'number' && cartTotalAfterDiscount < cartTotal;
+  const effectiveSubtotal = hasCoupon ? (cartTotalAfterDiscount as number) : cartTotal;
+  const couponSavings = hasCoupon ? cartTotal - (cartTotalAfterDiscount as number) : 0;
+  const taxAmount = effectiveSubtotal * 0.05;
+  const finalTotal = effectiveSubtotal + shippingFee + taxAmount + wrappingFee;
+
+  const handleApplyCoupon = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const code = couponInput.trim().toUpperCase();
+    if (!code) { setCouponError(isArabic ? 'يرجى إدخال كود الخصم' : 'Please enter a coupon code'); return; }
+    if (code === appliedCoupon) { setCouponError(isArabic ? 'هذا الكوبون مُطبَّق بالفعل' : 'This coupon is already applied'); return; }
+    setApplyingCoupon(true);
+    setCouponError("");
+    try {
+      await applyCoupon(code);
+      setCouponInput("");
+    } catch (error: any) {
+      const msg: string = error?.message || "";
+      if (/expired/i.test(msg) || /انتهت/i.test(msg)) {
+        setCouponError(isArabic ? 'هذا الكوبون منتهي الصلاحية' : 'This coupon has expired');
+      } else if (/not found|invalid/i.test(msg)) {
+        setCouponError(isArabic ? 'كود الخصم غير صحيح أو غير موجود' : 'Invalid or unknown coupon code');
+      } else {
+        setCouponError(msg || (isArabic ? 'تعذر تطبيق الكوبون' : 'Could not apply coupon'));
+      }
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    removeCoupon();
+    setCouponInput("");
+    setCouponError("");
+  };
 
   const handleUpdateQuantity = async (id: string, qty: number) => {
     if (qty <= 0) return;
@@ -39,16 +84,6 @@ export default function CartPage() {
   const handleRemove = async (id: string) => { try { await removeFromCart(id); } catch {} };
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setShippingAddress(p => ({ ...p, [e.target.name]: e.target.value }));
-  };
-
-  const saveOrderLocally = async (orderData: object) => {
-    try {
-      await fetch('/api/admin/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      });
-    } catch {}
   };
 
   const handleConfirmOrder = async () => {
@@ -64,43 +99,29 @@ export default function CartPage() {
       const token = localStorage.getItem('token');
       if (!token) { router.push('/login'); return; }
 
-      const orderPayload = {
-        _id: `LOCAL-${Date.now()}`,
-        user: { name: shippingAddress.name || "عميل", email: "" },
-        totalOrderPrice: finalTotal,
-        orderStatus: "pending",
-        paymentMethod,
-        deliveryMethod,
-        shippingAddress,
-        cartItems,
-        createdAt: new Date().toISOString(),
-      };
-
-      if (token.startsWith('local_admin_token_')) {
-        await saveOrderLocally(orderPayload);
-        setSavedTotal(finalTotal);
-        await clearCart(); setStep('success'); return;
-      }
-
+      // Resolve the server-side cart id
       let cartId: string | undefined;
       try { cartId = (await getCart(token)).data?._id; } catch {}
-
-      if (!cartId || paymentMethod === 'cash') {
-        if (cartId) {
-          try {
-            const res = await createCashOrder(cartId, { shippingAddress }, token);
-            if (res?.data?._id) orderPayload._id = res.data._id;
-          } catch {}
-        }
-        await saveOrderLocally(orderPayload);
-        setSavedTotal(finalTotal);
-        await clearCart(); setStep('success'); return;
+      if (!cartId) {
+        throw new Error(isArabic ? 'تعذّر الوصول إلى سلتك، حدّث الصفحة وحاول مجدداً' : 'Could not access your cart. Please refresh and try again.');
       }
 
-      // Card payment
-      await saveOrderLocally(orderPayload);
-      setSavedTotal(finalTotal);
-      await clearCart(); setStep('success');
+      if (paymentMethod === 'cash') {
+        await createCashOrder(cartId, { shippingAddress }, token);
+        setSavedTotal(finalTotal);
+        await clearCart();
+        setStep('success');
+        return;
+      }
+
+      // Card payment → redirect to the Stripe-hosted checkout session
+      const session = await createCheckoutSession(cartId, token);
+      const url = session?.session?.url;
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+      throw new Error(isArabic ? 'تعذّر بدء جلسة الدفع الإلكتروني' : 'Could not start the online payment session.');
     } catch (e: any) {
       alert(e.message || t('common.retry'));
     } finally { setCheckoutLoading(false); }
@@ -120,8 +141,8 @@ export default function CartPage() {
   if (step === 'success') return (
     <div className="min-h-screen bg-[#F8F7F5] flex items-center justify-center px-4" dir={dir}>
       <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center">
-        <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
-          <FaCheckCircle className="text-green-500 text-5xl" />
+        <div className="w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <FaCheckCircle className="text-amber-500 text-5xl" />
         </div>
         <h2 className="text-2xl font-black text-[#1F2937] mb-2">{t('cart.orderConfirmed')}</h2>
         <p className="text-gray-500 mb-2">{t('home.heroSubtitle')}</p>
@@ -231,12 +252,62 @@ export default function CartPage() {
                         <span className="w-10 text-center font-black text-sm">{item.count}</span>
                         <button onClick={() => handleUpdateQuantity(item._id, item.count + 1)} className="w-11 h-11 rounded-lg bg-white shadow flex items-center justify-center text-gray-600 hover:text-[#5C2E3A] transition-colors"><FaPlus size={10} /></button>
                       </div>
-                      <span className="font-black text-[#5C2E3A]">{item.price.toLocaleString()} <span className="text-xs text-[#D4AF37]">ر.ع</span></span>
+                      {(() => {
+                        // A product-/category-scoped coupon lowers this line's unit
+                        // price below the product's own price. Show the original
+                        // struck-through when the server has discounted the line.
+                        const p: any = item.product || {};
+                        const origUnit = p.priceAfterDiscount || p.price || 0;
+                        const lineDiscounted = origUnit > 0 && item.price < origUnit;
+                        return (
+                          <span className="flex items-center gap-2">
+                            {lineDiscounted && (
+                              <span className="text-gray-400 text-[11px] line-through font-medium">{origUnit.toLocaleString()}</span>
+                            )}
+                            <span className="font-black text-[#5C2E3A]">{item.price.toLocaleString()}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                   <button onClick={() => handleRemove(item._id)} className="w-11 h-11 rounded-xl bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center shrink-0 transition-colors"><FaTrashAlt size={14} /></button>
                 </div>
               ))}
+            </div>
+
+            {/* Coupon */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <p className="text-sm font-black text-[#5C2E3A] mb-3 flex items-center gap-2">
+                <FaGift size={13} /> {isArabic ? 'كود الخصم' : 'Discount code'}
+              </p>
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  <span className="flex items-center gap-2 font-black text-amber-700">
+                    <FaCheckCircle /> {appliedCoupon}
+                  </span>
+                  <button type="button" onClick={handleRemoveCoupon} className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors">
+                    {isArabic ? 'إزالة' : 'Remove'}
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => { setCouponInput(e.target.value); setCouponError(""); }}
+                    placeholder={isArabic ? 'أدخل كود الخصم' : 'Enter coupon code'}
+                    className="flex-1 h-12 rounded-xl border border-gray-200 bg-white px-4 font-bold text-[#1F2937] uppercase focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 outline-none transition-all placeholder:normal-case placeholder:text-gray-400"
+                  />
+                  <button
+                    type="submit"
+                    disabled={applyingCoupon || !couponInput.trim()}
+                    className="h-12 px-5 bg-[#5C2E3A] text-white rounded-xl font-black text-sm hover:bg-[#4A2330] transition-all disabled:opacity-50 shrink-0"
+                  >
+                    {applyingCoupon ? (isArabic ? '...' : '...') : (isArabic ? 'تطبيق' : 'Apply')}
+                  </button>
+                </form>
+              )}
+              {couponError && <p className="text-xs font-bold text-red-500 mt-2">{couponError}</p>}
             </div>
 
             {/* Mini summary */}
@@ -245,6 +316,18 @@ export default function CartPage() {
                 <span>{t('cart.total')} ({cartItems.length})</span>
                 <span className="font-bold">{cartTotal.toLocaleString()} {t('common.egp')}</span>
               </div>
+              {hasCoupon && (
+                <>
+                  <div className="flex justify-between text-sm text-amber-600 mb-2">
+                    <span>{isArabic ? 'خصم الكوبون' : 'Coupon discount'}</span>
+                    <span className="font-bold">- {couponSavings.toLocaleString()} {t('common.egp')}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-[#5C2E3A] border-t border-gray-100 pt-2 mb-2">
+                    <span className="font-black">{isArabic ? 'الإجمالي بعد الخصم' : 'Total after discount'}</span>
+                    <span className="font-black">{effectiveSubtotal.toLocaleString()} {t('common.egp')}</span>
+                  </div>
+                </>
+              )}
               <button onClick={() => setStep('checkout')} className="w-full h-13 mt-3 bg-[#5C2E3A] text-white rounded-xl font-black text-base flex items-center justify-center gap-3 hover:bg-[#4A2330] transition-all shadow-lg py-3.5">
                 {t('cart.checkout')} ←
               </button>
@@ -268,7 +351,7 @@ export default function CartPage() {
                     </div>
                     <div onClick={() => setDeliveryMethod('pickup')} className={sel(deliveryMethod === 'pickup')}>
                       <div className={iconBox(deliveryMethod === 'pickup')}><FaBoxOpen size={16} /></div>
-                      <div><p className="font-black text-base">{t('cart.deliveryOptionPickup')}</p><p className="text-sm text-green-500 font-bold">{t('cart.free')}</p></div>
+                      <div><p className="font-black text-base">{t('cart.deliveryOptionPickup')}</p><p className="text-sm text-amber-500 font-bold">{t('cart.free')}</p></div>
                     </div>
                   </div>
                 </div>
@@ -289,6 +372,14 @@ export default function CartPage() {
                       <div className="relative sm:col-span-2">
                         <FaMapMarkerAlt className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
                         <input type="text" name="details" value={shippingAddress.details} onChange={handleInput} autoComplete="street-address" enterKeyHint="next" className={inputCls + " pl-11"} placeholder={t('cart.addressPlaceholder')} />
+                      </div>
+                      <div className="relative">
+                        <FaMapMarkerAlt className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
+                        <input type="text" name="postalCode" value={shippingAddress.postalCode} onChange={handleInput} inputMode="numeric" autoComplete="postal-code" enterKeyHint="next" className={inputCls + " pl-11"} placeholder={isArabic ? 'الرمز البريدي (اختياري)' : 'Postal code (optional)'} />
+                      </div>
+                      <div className="relative">
+                        <FaMapMarkerAlt className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 pointer-events-none" size={14} />
+                        <input type="text" name="country" value={shippingAddress.country} onChange={handleInput} autoComplete="country-name" enterKeyHint="done" className={inputCls + " pl-11"} placeholder={isArabic ? 'الدولة' : 'Country'} />
                       </div>
                     </div>
                   </div>
@@ -349,7 +440,7 @@ export default function CartPage() {
                   ].map((r, i) => (
                     <div key={i} className="flex justify-between text-sm text-white/70">
                       <span>{r.label}</span>
-                      <span className={`font-bold ${r.gold ? 'text-[#D4AF37]' : r.green ? 'text-green-400' : ''}`}>{r.val}</span>
+                      <span className={`font-bold ${r.gold ? 'text-[#D4AF37]' : r.green ? 'text-amber-400' : ''}`}>{r.val}</span>
                     </div>
                   ))}
                   <div className="border-t border-white/10 pt-3 flex justify-between items-end">

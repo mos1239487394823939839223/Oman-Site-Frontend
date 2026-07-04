@@ -1,31 +1,99 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Controller, useForm } from "react-hook-form";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  FormControl,
+  FormControlLabel,
+  FormHelperText,
+  FormLabel,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Radio,
+  RadioGroup,
+  Select,
+  Stack,
+  Step,
+  StepLabel,
+  Stepper,
+  TextField,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
+import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
+import LockRoundedIcon from "@mui/icons-material/LockRounded";
+import LocalShippingRoundedIcon from "@mui/icons-material/LocalShippingRounded";
+import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
+import DiscountRoundedIcon from "@mui/icons-material/DiscountRounded";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
+import { useAppSnackbar } from "@/components/mui/AppSnackbarProvider";
 import { createCashOrder, createCheckoutSession, getCart } from "@/services/clientApi";
-import { FaTruck, FaPhone, FaMapMarkerAlt, FaPostageStamp, FaChevronLeft, FaCreditCard, FaMoneyBillWave, FaShieldAlt, FaTag, FaCheckCircle, FaTimesCircle, FaTimes } from "react-icons/fa";
-import Image from "next/image";
-import styles from "./CheckoutPage.module.css";
+import { resolveMediaUrl } from "@/lib/media";
+
+type CheckoutFormValues = {
+  details: string;
+  phone: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  shippingMethod: "standard" | "express";
+  paymentMethod: "card" | "cash";
+};
+
+const STEPS = ["Shipping Address", "Shipping Method", "Payment"];
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, cartTotal, cartTotalAfterDiscount, appliedCoupon, applyCoupon, removeCoupon, clearCart } = useCart();
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
+  const { showSnackbar } = useAppSnackbar();
+
+  const {
+    cartItems,
+    cartTotal,
+    cartTotalAfterDiscount,
+    appliedCoupon,
+    applyCoupon,
+    removeCoupon,
+    clearCart,
+  } = useCart();
   const { isAuthenticated } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
+
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState("");
   const [couponDiscount, setCouponDiscount] = useState<number | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    details: "",
-    phone: "",
-    city: "",
-    postalCode: ""
+
+  const {
+    control,
+    handleSubmit,
+    trigger,
+    formState: { errors },
+  } = useForm<CheckoutFormValues>({
+    mode: "onTouched",
+    defaultValues: {
+      details: "",
+      phone: "",
+      city: "",
+      postalCode: "",
+      country: "Oman",
+      shippingMethod: "standard",
+      paymentMethod: "card",
+    },
   });
 
   useEffect(() => {
@@ -34,45 +102,41 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (mounted && !isAuthenticated) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [mounted, isAuthenticated, router]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const hasDiscount =
+    typeof cartTotalAfterDiscount === "number" &&
+    cartTotalAfterDiscount < cartTotal;
 
-  const handleApplyCoupon = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const subtotal = hasDiscount ? (cartTotalAfterDiscount as number) : cartTotal;
+  const shippingFee = 0;
+  const finalTotal = useMemo(() => subtotal + shippingFee, [subtotal, shippingFee]);
+
+  const handleApplyCoupon = async () => {
     const code = couponInput.trim().toUpperCase();
     if (!code) {
-      setCouponError("يرجى إدخال كود الخصم أولاً");
+      setCouponError("Please enter a coupon code.");
       return;
     }
     if (code === appliedCoupon) {
-      setCouponError("هذا الكوبون مُطبَّق بالفعل");
+      setCouponError("This coupon is already applied.");
       return;
     }
 
     setApplyingCoupon(true);
     setCouponError("");
-    setCouponDiscount(null);
 
     try {
       const { discount } = await applyCoupon(code);
       setCouponDiscount(discount);
       setCouponInput("");
+      showSnackbar("Coupon applied successfully.", "success");
     } catch (error: any) {
-      // Surface human-readable messages for common coupon failures
-      const msg: string = error?.message || "";
-      if (/expired/i.test(msg) || /انتهت/i.test(msg)) {
-        setCouponError("هذا الكوبون منتهي الصلاحية");
-      } else if (/not found|invalid/i.test(msg)) {
-        setCouponError("كود الخصم غير صحيح أو غير موجود");
-      } else {
-        setCouponError(msg || "تعذر تطبيق الكوبون، يرجى المحاولة مجدداً");
-      }
+      const msg: string = error?.message || "Could not apply coupon.";
+      setCouponError(msg);
+      showSnackbar(msg, "error");
     } finally {
       setApplyingCoupon(false);
     }
@@ -83,343 +147,488 @@ export default function CheckoutPage() {
     setCouponDiscount(null);
     setCouponError("");
     setCouponInput("");
+    showSnackbar("Coupon removed.", "info");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.details || !formData.phone || !formData.city) {
-      alert('يرجى تعبئة جميع الحقول المطلوبة');
+  const handleNext = async () => {
+    const stepFields: Array<Array<keyof CheckoutFormValues>> = [
+      ["details", "phone", "city", "postalCode", "country"],
+      ["shippingMethod"],
+      ["paymentMethod"],
+    ];
+
+    const valid = await trigger(stepFields[activeStep]);
+    if (!valid) {
+      showSnackbar("Please fix the highlighted fields.", "warning");
       return;
     }
 
+    setActiveStep((prev) => Math.min(prev + 1, STEPS.length - 1));
+  };
+
+  const handleBack = () => {
+    setActiveStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  const onSubmit = async (values: CheckoutFormValues) => {
     setLoading(true);
+
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
-        router.push('/login');
+        router.push("/login");
         return;
       }
 
-      // Step 1: Ensure we have the real Cart ID
       const cartResponse = await getCart(token);
       if (cartResponse.status === "fail" || !cartResponse.data?._id) {
-        router.push('/login');
+        router.push("/login");
         return;
       }
 
       const cartId = cartResponse.data._id;
+      const shippingAddress = {
+        details: values.details,
+        phone: values.phone,
+        city: values.city,
+        postalCode: values.postalCode,
+        country: values.country,
+      };
 
-      if (paymentMethod === 'card') {
-        const query = new URLSearchParams({
-          ...formData,
-          cartId: cartId
-        }).toString();
-        router.push(`/payment?${query}`);
-      } else {
-        const response = await createCashOrder(cartId, { shippingAddress: formData }, token);
-        if (response.status === "success") {
-          clearCart();
-          router.push('/payment/success');
-        } else {
-          throw new Error("تعذر إنشاء الطلب");
+      if (values.paymentMethod === "card") {
+        const session = await createCheckoutSession(cartId, token);
+        const url = session?.session?.url;
+        if (!url) {
+          throw new Error("Could not start the secure payment session.");
         }
+        showSnackbar("Redirecting to secure payment...", "info");
+        window.location.href = url;
+        return;
       }
+
+      const response = await createCashOrder(cartId, { shippingAddress }, token);
+      if (response.status === "success") {
+        await clearCart();
+        showSnackbar("Order placed successfully.", "success");
+        router.push("/payment/success");
+        return;
+      }
+
+      throw new Error("Could not create order.");
     } catch (error: any) {
-      console.error('Checkout error:', error);
-      if (error.message?.includes('401')) {
-        alert('انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى');
-        router.push('/login');
-      } else {
-        alert('حدث خطأ أثناء إتمام الطلب: ' + (error.message || ''));
-      }
+      const message = error?.message || "Checkout failed. Please try again.";
+      showSnackbar(message, "error");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!mounted || !isAuthenticated || cartItems.length === 0) {
+  if (!mounted || !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5a1832]"></div>
-      </div>
+      <Box
+        sx={{
+          minHeight: "70vh",
+          display: "grid",
+          placeItems: "center",
+          bgcolor: "background.default",
+        }}
+      >
+        <CircularProgress color="primary" />
+      </Box>
     );
   }
 
-  const hasDiscount = typeof cartTotalAfterDiscount === "number" && cartTotalAfterDiscount < cartTotal;
-  const finalTotal = hasDiscount ? cartTotalAfterDiscount : cartTotal;
-  const discountValue = hasDiscount ? (cartTotal - cartTotalAfterDiscount) : 0;
+  if (cartItems.length === 0) {
+    return (
+      <Box
+        sx={{
+          minHeight: "70vh",
+          display: "grid",
+          placeItems: "center",
+          px: 2,
+          bgcolor: "background.default",
+        }}
+      >
+        <Card sx={{ maxWidth: 520, width: "100%" }}>
+          <CardContent sx={{ p: 4, textAlign: "center" }}>
+            <Typography variant="h5" gutterBottom sx={{ fontWeight: 800 }}>
+              Your cart is empty
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              Add products to continue checkout.
+            </Typography>
+            <Button variant="contained" onClick={() => router.push("/products")}>Browse Products</Button>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
 
   return (
-    <div className={styles.container}>
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div>
-            <button onClick={() => router.back()} className="flex items-center gap-2 text-[#5a1832] font-black hover:translate-x-[-4px] transition-all mb-4">
-              <FaChevronLeft className="rotate-180" /> العودة للحقيبة
-            </button>
-            <h1 className="text-4xl font-black text-[#5a1832] tracking-tighter">إنهاء الطلب</h1>
-            <p className="text-gray-500 font-medium mt-1">أدخل بيانات الشحن لإتمام عملية الشراء</p>
-          </div>
-        </div>
+    <Box sx={{ bgcolor: "background.default", py: { xs: 2, md: 4 } }}>
+      <Box sx={{ maxWidth: 1320, mx: "auto", px: { xs: 2, md: 3 } }}>
+        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mb: 3 }}>
+          <Button
+            variant="text"
+            startIcon={<ArrowBackIosNewRoundedIcon />}
+            onClick={() => router.back()}
+            aria-label="Back to cart"
+          >
+            Back to Cart
+          </Button>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", color: "text.secondary" }}>
+            <LockRoundedIcon fontSize="small" />
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>SSL Secured Checkout</Typography>
+          </Stack>
+        </Stack>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          {/* Checkout Form */}
-          <div className="lg:col-span-7">
-            <div className={styles.glassCard + " p-8 md:p-12"}>
-              <h2 className="text-2xl font-black text-[#5a1832] mb-8 flex items-center gap-3">
-                <FaTruck className="text-[#D4AF37]" /> معلومات الشحن
-              </h2>
-              
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className={styles.inputGroup}>
-                  <label className={styles.label}>تفاصيل العنوان بالتفصيل *</label>
-                  <div className="relative">
-                    <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      name="details"
-                      value={formData.details}
-                      onChange={handleInputChange}
-                      placeholder="اسم الشارع، رقم البناية، الشقة"
-                      autoComplete="street-address"
-                      enterKeyHint="next"
-                      className={styles.inputField + " pl-12"}
-                      required
-                    />
-                  </div>
-                </div>
+        <Grid container spacing={3} sx={{ alignItems: "flex-start" }}>
+          <Grid size={{ xs: 12, lg: 7 }}>
+            <Card>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
+                  Checkout
+                </Typography>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className={styles.inputGroup}>
-                    <label className={styles.label}>رقم الهاتف للتواصل *</label>
-                    <div className="relative">
-                      <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="00968XXXXXXX"
-                        inputMode="tel"
-                        autoComplete="tel"
-                        enterKeyHint="next"
-                        className={styles.inputField + " pl-12"}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className={styles.inputGroup}>
-                    <label className={styles.label}>المدينة / المنطقة *</label>
-                    <div className="relative">
-                      <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        placeholder="مسقط"
-                        autoComplete="address-level2"
-                        enterKeyHint="next"
-                        className={styles.inputField + " pl-12"}
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.inputGroup}>
-                  <label className={styles.label}>الرمز البريدي (اختياري)</label>
-                  <div className="relative">
-                    <FaPostageStamp className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      name="postalCode"
-                      value={formData.postalCode}
-                      onChange={handleInputChange}
-                      placeholder="12345"
-                      inputMode="numeric"
-                      autoComplete="postal-code"
-                      enterKeyHint="done"
-                      className={styles.inputField + " pl-12"}
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-gray-100">
-                  <h3 className="text-lg font-black text-[#5a1832] mb-6">اختر طريقة الدفع</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div 
-                      className={`${styles.methodCard} ${paymentMethod === 'card' ? styles.methodCardActive : ''}`}
-                      onClick={() => setPaymentMethod('card')}
-                    >
-                      <FaCreditCard className={paymentMethod === 'card' ? 'text-[#5a1832]' : 'text-gray-400'} size={24} />
-                      <div>
-                        <p className="font-black text-sm text-gray-900">بطاقة بنكية</p>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase">دفع إلكتروني آمن</p>
-                      </div>
-                    </div>
-                    <div 
-                      className={`${styles.methodCard} ${paymentMethod === 'cash' ? styles.methodCardActive : ''}`}
-                      onClick={() => setPaymentMethod('cash')}
-                    >
-                      <FaMoneyBillWave className={paymentMethod === 'cash' ? 'text-[#5a1832]' : 'text-gray-400'} size={24} />
-                      <div>
-                        <p className="font-black text-sm text-gray-900">الدفع عند الاستلام</p>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase">متوفر لبعض المناطق</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={styles.submitButton}
+                <Stepper
+                  activeStep={activeStep}
+                  orientation={isSmallScreen ? "vertical" : "horizontal"}
+                  sx={{ mb: 3 }}
                 >
-                  {loading ? (
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                  ) : (
-                    <>{paymentMethod === 'card' ? 'متابعة للدفع آمن' : 'تأكيد الطلب الآن'}</>
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
+                  {STEPS.map((label) => (
+                    <Step key={label}>
+                      <StepLabel>{label}</StepLabel>
+                    </Step>
+                  ))}
+                </Stepper>
 
-          {/* Sidebar Summary */}
-          <div className="lg:col-span-5">
-            <div className={styles.glassCard + " p-8"}>
-              <h2 className="text-xl font-black text-[#5a1832] mb-8 border-b pb-4">ملخص حقيبتك</h2>
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar mb-8">
-                {cartItems.map((item) => (
-                  <div key={item._id} className="flex gap-4 items-center bg-gray-50/50 p-4 rounded-2xl border border-gray-100 hover:bg-white transition-all">
-                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-white shadow-sm flex-shrink-0">
-                      <Image
-                        src={item.product.imageCover || '/placeholder.svg'}
-                        alt={item.product.title}
-                        fill
-                        className="object-contain p-2"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-gray-900 text-sm truncate">{item.product.title}</h4>
-                      <p className="text-xs text-gray-500 font-bold">الكمية: {item.count} × {item.price} ر.ع</p>
-                    </div>
-                    <div className="font-black text-[#5a1832] text-sm">
-                      {item.price * item.count} ر.ع
-                    </div>
-                  </div>
-                ))}
-              </div>
+                <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+                  {activeStep === 0 && (
+                    <Stack spacing={2}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        Shipping Address
+                      </Typography>
 
-              {/* ── Coupon Section ─────────────────────────────── */}
-              {appliedCoupon ? (
-                /* Applied coupon badge */
-                <div className="mb-6">
-                  <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
-                    <FaCheckCircle className="text-emerald-500 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-emerald-700 uppercase tracking-widest">كوبون مفعّل</p>
-                      <p className="font-black text-emerald-800 text-sm mt-0.5">
-                        {appliedCoupon}
-                        {couponDiscount !== null && (
-                          <span className="mr-2 text-[11px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                            خصم {couponDiscount}%
-                          </span>
+                      <Controller
+                        name="details"
+                        control={control}
+                        rules={{ required: "Address details are required." }}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Address details"
+                            aria-label="Address details"
+                            autoComplete="street-address"
+                            error={Boolean(errors.details)}
+                            helperText={errors.details?.message}
+                          />
                         )}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoupon}
-                      className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-100 transition-colors"
-                      aria-label="إزالة الكوبون"
-                    >
-                      <FaTimes size={12} />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Coupon entry form */
-                <form onSubmit={handleApplyCoupon} className="mb-6">
-                  <div className={`flex items-center gap-2 border rounded-2xl p-1.5 transition-colors ${couponError ? "border-red-300 bg-red-50/40" : "border-gray-200 bg-gray-50/70"}`}>
-                    <div className="pl-2 flex-shrink-0">
-                      <FaTag className={`text-sm ${couponError ? "text-red-400" : "text-gray-400"}`} />
-                    </div>
-                    <input
-                      type="text"
-                      value={couponInput}
-                      onChange={(e) => {
-                        setCouponInput(e.target.value.toUpperCase());
-                        if (couponError) setCouponError("");
-                      }}
-                      placeholder="أدخل كود الخصم"
-                      maxLength={30}
-                      autoCapitalize="characters"
-                      autoComplete="off"
-                      spellCheck={false}
-                      className="flex-1 bg-transparent outline-none font-bold text-sm text-gray-700 placeholder:text-gray-400 placeholder:font-medium tracking-widest uppercase"
-                      aria-label="كود الخصم"
-                    />
-                    <button
-                      type="submit"
-                      disabled={applyingCoupon || !couponInput.trim()}
-                      className="px-4 py-2 rounded-xl bg-[#5a1832] text-white text-xs font-black hover:bg-[#4a1429] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 min-w-[72px] justify-center"
-                    >
-                      {applyingCoupon ? (
-                        <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      ) : "تطبيق"}
-                    </button>
-                  </div>
-                  {couponError && (
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <FaTimesCircle className="text-red-500 text-xs flex-shrink-0" />
-                      <p className="text-xs font-bold text-red-600">{couponError}</p>
-                    </div>
+                      />
+
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Controller
+                            name="phone"
+                            control={control}
+                            rules={{
+                              required: "Phone number is required.",
+                              minLength: { value: 8, message: "Phone number is too short." },
+                            }}
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                label="Phone"
+                                aria-label="Phone"
+                                autoComplete="tel"
+                                error={Boolean(errors.phone)}
+                                helperText={errors.phone?.message}
+                              />
+                            )}
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Controller
+                            name="city"
+                            control={control}
+                            rules={{ required: "City is required." }}
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                label="City"
+                                aria-label="City"
+                                autoComplete="address-level2"
+                                error={Boolean(errors.city)}
+                                helperText={errors.city?.message}
+                              />
+                            )}
+                          />
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Controller
+                            name="postalCode"
+                            control={control}
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                label="Postal code"
+                                aria-label="Postal code"
+                                autoComplete="postal-code"
+                              />
+                            )}
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Controller
+                            name="country"
+                            control={control}
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                label="Country"
+                                aria-label="Country"
+                                autoComplete="country-name"
+                              />
+                            )}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Stack>
                   )}
-                </form>
-              )}
 
-              <div className={styles.totalBox}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-white/70 font-bold">المجموع الفرعي</span>
-                  <span className="font-black text-white">{cartTotal} ر.ع</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-white/70 font-bold">الشحن والتوصيل</span>
-                  <span className="text-[#D4AF37] font-black">مجاني</span>
-                </div>
-                {hasDiscount && (
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-white/70 font-bold">الخصم</span>
-                    <span className="font-black text-emerald-200">- {discountValue} ر.ع</span>
-                  </div>
-                )}
-                <div className="pt-4 border-t border-white/20 flex justify-between items-center">
-                  <span className="text-white font-black text-lg">الإجمالي النهائي</span>
-                  <span className="text-[#D4AF37] font-black text-2xl">{finalTotal} ر.ع</span>
-                </div>
-              </div>
+                  {activeStep === 1 && (
+                    <Stack spacing={2}>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                        <LocalShippingRoundedIcon color="primary" />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                          Shipping Method
+                        </Typography>
+                      </Stack>
 
-              <div className="mt-8 flex items-center justify-center gap-6">
-                <div className="flex flex-col items-center gap-1 opacity-50">
-                  <FaShieldAlt className="text-gray-400" />
-                  <span className="text-[8px] font-black uppercase">ضمان الجودة</span>
-                </div>
-                <div className="flex flex-col items-center gap-1 opacity-50">
-                  <FaLock className="text-gray-400" />
-                  <span className="text-[8px] font-black uppercase">دفع مشفر</span>
-                </div>
-                <div className="flex flex-col items-center gap-1 opacity-50">
-                  <FaTruck className="text-gray-400" />
-                  <span className="text-[8px] font-black uppercase">توصيل سريع</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+                      <Controller
+                        name="shippingMethod"
+                        control={control}
+                        rules={{ required: "Choose a shipping method." }}
+                        render={({ field }) => (
+                          <FormControl error={Boolean(errors.shippingMethod)}>
+                            <FormLabel aria-label="Shipping method">Delivery options</FormLabel>
+                            <RadioGroup {...field}>
+                              <FormControlLabel value="standard" control={<Radio />} label="Standard delivery (2-4 days)" />
+                              <FormControlLabel value="express" control={<Radio />} label="Express delivery (next day)" />
+                            </RadioGroup>
+                            {errors.shippingMethod?.message && (
+                              <FormHelperText>{errors.shippingMethod.message}</FormHelperText>
+                            )}
+                          </FormControl>
+                        )}
+                      />
+                    </Stack>
+                  )}
+
+                  {activeStep === 2 && (
+                    <Stack spacing={2}>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                        <PaymentsRoundedIcon color="primary" />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                          Payment Method
+                        </Typography>
+                      </Stack>
+
+                      <Controller
+                        name="paymentMethod"
+                        control={control}
+                        rules={{ required: "Choose a payment method." }}
+                        render={({ field }) => (
+                          <FormControl error={Boolean(errors.paymentMethod)}>
+                            <FormLabel aria-label="Payment method">Select one</FormLabel>
+                            <RadioGroup {...field}>
+                              <FormControlLabel value="card" control={<Radio />} label="Card payment (secure gateway)" />
+                              <FormControlLabel value="cash" control={<Radio />} label="Cash on delivery" />
+                            </RadioGroup>
+                            {errors.paymentMethod?.message && (
+                              <FormHelperText>{errors.paymentMethod.message}</FormHelperText>
+                            )}
+                          </FormControl>
+                        )}
+                      />
+
+                      <Alert severity="info" variant="outlined">
+                        You will only be charged once your order is confirmed.
+                      </Alert>
+                    </Stack>
+                  )}
+
+                  <Stack direction="row" spacing={1.5} sx={{ justifyContent: "space-between", mt: 3 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={activeStep === 0 || loading}
+                      aria-label="Go to previous checkout step"
+                    >
+                      Back
+                    </Button>
+
+                    {activeStep < STEPS.length - 1 ? (
+                      <Button
+                        variant="contained"
+                        onClick={handleNext}
+                        disabled={loading}
+                        aria-label="Go to next checkout step"
+                      >
+                        Continue
+                      </Button>
+                    ) : (
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        disabled={loading}
+                        aria-label="Place order now"
+                        startIcon={loading ? <CircularProgress size={18} color="inherit" /> : undefined}
+                      >
+                        {loading ? "Processing..." : "Place Order"}
+                      </Button>
+                    )}
+                  </Stack>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid size={{ xs: 12, lg: 5 }}>
+            <Stack spacing={2}>
+              <Card>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>
+                    Order Summary
+                  </Typography>
+
+                  <Stack spacing={1.25} sx={{ maxHeight: 360, overflowY: "auto", pr: 0.5 }}>
+                    {cartItems.map((item) => {
+                      const product: any = item.product || item.gift;
+                      const title = product?.title || product?.name || "Product";
+
+                      return (
+                        <Box
+                          key={item._id}
+                          sx={{
+                            display: "grid",
+                            gridTemplateColumns: "64px 1fr auto",
+                            alignItems: "center",
+                            gap: 1,
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 2,
+                            p: 1,
+                          }}
+                        >
+                          <Box sx={{ position: "relative", width: 64, height: 64, borderRadius: 2, overflow: "hidden", bgcolor: "grey.50" }}>
+                            <Image
+                              src={resolveMediaUrl(product?.imageCover || product?.image, item.gift ? "gifts" : "products")}
+                              alt={title}
+                              fill
+                              sizes="64px"
+                              className="object-contain"
+                            />
+                          </Box>
+
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
+                              {title}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Qty: {item.count} x {item.price.toLocaleString()}
+                            </Typography>
+                          </Box>
+
+                          <Typography variant="body2" color="primary.main" sx={{ fontWeight: 800 }}>
+                            {(item.count * item.price).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+
+                  <Box sx={{ mt: 2.5 }}>
+                    {appliedCoupon ? (
+                      <Alert
+                        severity="success"
+                        action={
+                          <Button color="inherit" size="small" onClick={handleRemoveCoupon}>
+                            Remove
+                          </Button>
+                        }
+                      >
+                        Coupon {appliedCoupon} applied
+                        {couponDiscount !== null ? ` (${couponDiscount}% off)` : ""}
+                      </Alert>
+                    ) : (
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ alignItems: "stretch" }}>
+                        <TextField
+                          value={couponInput}
+                          onChange={(event) => {
+                            setCouponInput(event.target.value.toUpperCase());
+                            if (couponError) setCouponError("");
+                          }}
+                          placeholder="Coupon code"
+                          aria-label="Coupon code"
+                          size="small"
+                          error={Boolean(couponError)}
+                          helperText={couponError}
+                          slotProps={{
+                            input: {
+                              startAdornment: <DiscountRoundedIcon fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />,
+                            },
+                          }}
+                        />
+                        <Button
+                          variant="outlined"
+                          onClick={handleApplyCoupon}
+                          disabled={applyingCoupon || !couponInput.trim()}
+                          aria-label="Apply coupon code"
+                        >
+                          {applyingCoupon ? "Applying..." : "Apply"}
+                        </Button>
+                      </Stack>
+                    )}
+                  </Box>
+
+                  <Stack spacing={1.25} sx={{ mt: 2.5 }}>
+                    <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                      <Typography color="text.secondary">Subtotal</Typography>
+                      <Typography sx={{ fontWeight: 700 }}>{cartTotal.toLocaleString()}</Typography>
+                    </Stack>
+
+                    {hasDiscount && (
+                      <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                        <Typography color="success.main">Discount</Typography>
+                        <Typography color="success.main" sx={{ fontWeight: 700 }}>
+                          -{(cartTotal - (cartTotalAfterDiscount as number)).toLocaleString()}
+                        </Typography>
+                      </Stack>
+                    )}
+
+                    <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                      <Typography color="text.secondary">Shipping</Typography>
+                      <Typography sx={{ fontWeight: 700 }}>Free</Typography>
+                    </Stack>
+
+                    <Box sx={{ borderTop: "1px solid", borderColor: "divider", pt: 1.25 }}>
+                      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Total</Typography>
+                        <Typography variant="h6" color="primary.main" sx={{ fontWeight: 800 }}>
+                          {finalTotal.toLocaleString()}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Stack>
+          </Grid>
+        </Grid>
+      </Box>
+    </Box>
   );
 }

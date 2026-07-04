@@ -288,7 +288,6 @@ export default function ProductDetailContent({ productId, isGift = false }: Prod
             <span className="text-5xl font-black text-[#5a1832]">
               {(product.priceAfterDiscount || product.price).toLocaleString()}
             </span>
-            <span className="text-xl font-bold text-gray-400">ر.ع</span>
             {product.priceAfterDiscount && (
               <span className="text-xl text-gray-300 line-through font-bold">
                 {product.price.toLocaleString()}

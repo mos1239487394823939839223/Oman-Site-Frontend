@@ -45,19 +45,36 @@ function readInitialLanguage(fallback: AppLanguage = "ar"): AppLanguage {
   return fallback;
 }
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
+export function LanguageProvider({
+  children,
+  initialLanguage = "ar",
+}: {
+  children: React.ReactNode;
+  initialLanguage?: AppLanguage;
+}) {
   const { i18n } = useTranslation();
-  // Always start with "ar" so server and client initial renders match (avoids hydration mismatch).
-  // After mount, update to the user's stored preference.
-  const [language, setLanguageState] = useState<AppLanguage>("ar");
+  const [language, setLanguageState] = useState<AppLanguage>(initialLanguage);
+
+  // SERVER ONLY: pin the shared i18next singleton to this request's language
+  // during render. Node renders the tree synchronously per request, so this
+  // scopes t() correctly and defeats cross-request singleton leakage. We must
+  // NOT do this on the client during render — changeLanguage() emits a
+  // `languageChanged` event that makes subscribed components (LanguageSwitcher)
+  // setState mid-render ("update a component while rendering another"). The
+  // client instead starts already on the cookie language (set at i18n init in
+  // src/i18n/config.ts) so the first render matches the server with no change,
+  // and syncs later toggles via the effect below (post-commit).
+  if (typeof window === "undefined" && i18n.language !== language) {
+    void i18n.changeLanguage(language);
+  }
 
   useEffect(() => {
-    const stored = readInitialLanguage("ar");
+    const stored = readInitialLanguage(initialLanguage);
     if (stored !== language) {
       setLanguageState(stored);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once after mount
+  }, [initialLanguage]);
 
   useEffect(() => {
     if (i18n.language !== language) {

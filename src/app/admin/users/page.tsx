@@ -1,9 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminSidebar from "@/components/admin/AdminSidebar";
-import AdminHeader from "@/components/admin/AdminHeader";
-import AdminRouteGuard from "@/components/admin/AdminRouteGuard";
 import UsersTable from "@/components/admin/UsersTable";
 import ConfirmModal from "@/components/admin/ConfirmModal";
 import UserForm from "@/components/admin/UserForm";
@@ -11,8 +8,7 @@ import { adminApi } from "@/services/adminApi";
 import { User } from "@/services/clientApi";
 import { FaPlus, FaTimes } from "react-icons/fa";
 
-function UsersManagementContent() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+export default function UsersManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
@@ -55,7 +51,7 @@ function UsersManagementContent() {
   }) => {
     try {
       setFormLoading(true);
-      
+
       if (editingUser) {
         const { password, ...userData } = data;
         await adminApi.updateUser(editingUser._id, userData);
@@ -71,10 +67,10 @@ function UsersManagementContent() {
         }
         await adminApi.createUser(data);
       }
-      
+
       setShowForm(false);
       setEditingUser(null);
-      fetchData(); // Refresh list
+      fetchData();
     } catch (error: any) {
       console.error("Error saving user:", error);
       alert(error.message || "Failed to save user");
@@ -95,7 +91,7 @@ function UsersManagementContent() {
   const handleToggleActive = async (user: User) => {
     try {
       await adminApi.toggleUserActive(user._id);
-      fetchData(); // Refresh list
+      fetchData();
     } catch (error: any) {
       console.error("Error toggling user active status:", error);
       alert(error.message || "Failed to update user status");
@@ -116,89 +112,67 @@ function UsersManagementContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminHeader onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-      
-      <div className="flex">
-        <AdminSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-        
-        <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-full">
-            {/* Header */}
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
-                <p className="text-gray-600 mt-1">Manage your platform users and admins</p>
-              </div>
+    <>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">Users Management</h1>
+          <p className="text-gray-500 mt-1 text-sm">Manage your platform users and admins</p>
+        </div>
+        <button
+          onClick={handleCreate}
+          className="px-4 py-2.5 bg-[#5C2E3A] text-white rounded-xl hover:bg-[#4A2330] transition-colors flex items-center gap-2 font-bold text-sm shadow-sm"
+        >
+          <FaPlus className="w-4 h-4" />
+          Create User
+        </button>
+      </div>
+
+      <UsersTable
+        users={users}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onToggleActive={handleToggleActive}
+      />
+
+      {/* User Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-gray-200">
+            <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingUser ? "Edit User" : "Create New User"}
+              </h2>
               <button
-                onClick={handleCreate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                onClick={handleFormCancel}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 hover:bg-gray-100 rounded-lg"
+                disabled={formLoading}
               >
-                <FaPlus className="w-4 h-4" />
-                Create User
+                <FaTimes className="w-5 h-5" />
               </button>
             </div>
-
-            {/* Users Table */}
-            <UsersTable
-              users={users}
-              loading={loading}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onToggleActive={handleToggleActive}
-            />
-
-            {/* User Form Modal */}
-            {showForm && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                  <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      {editingUser ? "Edit User" : "Create New User"}
-                    </h2>
-                    <button
-                      onClick={handleFormCancel}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                      disabled={formLoading}
-                    >
-                      <FaTimes className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div className="p-6">
-                    <UserForm
-                      user={editingUser}
-                      onSubmit={handleFormSubmit}
-                      onCancel={handleFormCancel}
-                      loading={formLoading}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Delete Confirmation Modal */}
-            <ConfirmModal
-              isOpen={!!deleteUser}
-              title="Delete User"
-              message={`Are you sure you want to delete "${deleteUser?.name}"? This action cannot be undone.`}
-              confirmText="Delete"
-              cancelText="Cancel"
-              onConfirm={confirmDelete}
-              onCancel={() => setDeleteUser(null)}
-              isDanger={true}
-            />
+            <div className="p-6">
+              <UserForm
+                user={editingUser}
+                onSubmit={handleFormSubmit}
+                onCancel={handleFormCancel}
+                loading={formLoading}
+              />
+            </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={!!deleteUser}
+        title="Delete User"
+        message={`Are you sure you want to delete "${deleteUser?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteUser(null)}
+        isDanger={true}
+      />
+    </>
   );
 }
-
-export default function UsersManagementPage() {
-  return (
-    <AdminRouteGuard>
-      <UsersManagementContent />
-    </AdminRouteGuard>
-  );
-}
-

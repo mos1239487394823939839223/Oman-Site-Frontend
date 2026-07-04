@@ -23,7 +23,7 @@ const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case "delivered":
     case "completed":
-      return "bg-primary/10 text-green-800";
+      return "bg-primary/10 text-amber-800";
     case "pending":
       return "bg-yellow-100 text-yellow-800";
     case "cancelled":

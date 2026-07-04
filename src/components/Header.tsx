@@ -13,8 +13,10 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./LanguageSwitcher";
 import Link from "next/link";
 import Image from "next/image";
+import { Badge, IconButton, Tooltip } from "@mui/material";
 import { loadNavItems, NavItem, DEFAULT_NAV_ITEMS } from "@/lib/navbarConfig";
 import { useLanguage } from "./LanguageProvider";
+import CartDrawer from "@/components/mui/CartDrawer";
 
 // Icon map for dynamic icons
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -40,6 +42,7 @@ export default function Header() {
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV_ITEMS);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Load from localStorage (dynamic config from admin dashboard)
@@ -135,6 +138,23 @@ export default function Header() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-4">
+          <Tooltip title={t("cart.title")}>
+            <IconButton
+              aria-label={t("cart.title")}
+              onClick={() => setCartDrawerOpen(true)}
+              sx={{
+                color: "white",
+                bgcolor: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                "&:hover": { bgcolor: "rgba(255,255,255,0.16)" },
+              }}
+            >
+              <Badge badgeContent={cartCount} color="secondary" max={99}>
+                <FaShoppingCart size={17} />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+
           {/* User Dropdown */}
           <div ref={userMenuRef} className="relative group">
             <button 
@@ -193,10 +213,10 @@ export default function Header() {
 
       {/* Mobile Drawer Overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-[100] lg:hidden animate-in fade-in duration-300" onClick={toggleMobileMenu}>
+        <div className="fixed inset-0 z-[100] lg:hidden drawer-overlay" onClick={toggleMobileMenu}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className={`absolute top-0 bottom-0 w-80 max-w-[85%] ${isAr ? 'left-0' : 'right-0'} bg-[#5a1832] px-8 py-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))] shadow-2xl border-l border-white/10 animate-in slide-in-from-${isAr ? 'left' : 'right'} duration-500`}
+            className={`absolute top-0 bottom-0 w-80 max-w-[85%] ${isAr ? 'left-0' : 'right-0'} bg-[#5a1832] px-8 py-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))] shadow-2xl border-l border-white/10 ${isAr ? 'drawer-panel-left' : 'drawer-panel-right'}`}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -254,6 +274,8 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
     </nav>
   );
 }

@@ -19,20 +19,44 @@ import {
   FaClock,
 } from "react-icons/fa";
 
+interface OrderItem {
+  _id?: string;
+  product?: { _id?: string; title?: string; imageCover?: string } | string;
+  gift?: { _id?: string; title?: string; imageCover?: string } | string | null;
+  name?: string;
+  title?: string;
+  image?: string;
+  quantity?: number;
+  count?: number;
+  price?: number;
+}
+
 interface Order {
   _id: string;
-  user?: { name: string; email: string };
+  user?: { name?: string; email?: string };
   totalOrderPrice: number;
-  orderStatus: string;
+  taxPrice?: number;
+  shippingPrice?: number;
+  status?: string;
+  orderStatus?: string;
+  statusUpdatedAt?: string;
+  isPaid?: boolean;
+  isDelivered?: boolean;
   createdAt: string;
   paymentMethod?: string;
   deliveryMethod?: string;
   shippingAddress?: {
-    details?: string;
+    // Backend shape:
+    address?: string;
     city?: string;
+    postalCode?: string;
+    country?: string;
+    // Local/legacy shape:
+    details?: string;
     phone?: string;
     name?: string;
   };
+  cartItems?: OrderItem[];
 }
 
 interface OrderDetailsModalProps {
@@ -47,20 +71,20 @@ interface OrderDetailsModalProps {
 const statusConfig: Record<string, { label: string; classes: string; dot: string; icon: React.ReactNode }> = {
   delivered: {
     label: "تم التسليم",
-    classes: "bg-emerald-50 text-emerald-800 border-emerald-200",
-    dot: "bg-emerald-500",
+    classes: "bg-amber-50 text-amber-800 border-amber-200",
+    dot: "bg-amber-500",
     icon: <FaCheckCircle className="text-xs" />,
   },
   completed: {
     label: "مكتمل",
-    classes: "bg-emerald-50 text-emerald-800 border-emerald-200",
-    dot: "bg-emerald-500",
+    classes: "bg-amber-50 text-amber-800 border-amber-200",
+    dot: "bg-amber-500",
     icon: <FaCheckCircle className="text-xs" />,
   },
   pending: {
     label: "قيد الانتظار",
-    classes: "bg-amber-50 text-amber-900 border-amber-200",
-    dot: "bg-amber-500",
+    classes: "bg-[#5C2E3A]/10 text-[#5C2E3A] border-[#5C2E3A]/20",
+    dot: "bg-[#5C2E3A]",
     icon: <FaClock className="text-xs" />,
   },
   confirmed: {
@@ -129,9 +153,16 @@ export default function OrderDetailsModal({
   }, [isOpen]);
 
   const status = useMemo(() => {
-    const key = order?.orderStatus?.toLowerCase() || "";
+    // Prefer the backend's `status` field, then the legacy `orderStatus`;
+    // otherwise derive from the isPaid / isDelivered flags.
+    let key = (order?.status || order?.orderStatus)?.toLowerCase() || "";
+    if (!key && order) {
+      if (order.isDelivered) key = "delivered";
+      else if (order.isPaid) key = "processing";
+      else key = "pending";
+    }
     return statusConfig[key] || {
-      label: order?.orderStatus || "-",
+      label: order?.status || order?.orderStatus || "-",
       classes: "bg-gray-100 text-gray-700 border-gray-200",
       dot: "bg-gray-400",
       icon: <FaClock className="text-xs" />,
@@ -141,23 +172,41 @@ export default function OrderDetailsModal({
   const detailValues = useMemo(() => {
     if (!order) return null;
 
+    const sa = order.shippingAddress || {};
+    // Build the fullest address we can from either the backend or local shape.
+    const addressParts = [
+      sa.address || sa.details,
+      sa.city,
+      sa.postalCode,
+      sa.country,
+    ].filter(Boolean);
+    const address = addressParts.length
+      ? addressParts.join("، ")
+      : (sa.name || sa.phone ? `${sa.name || ""} ${sa.phone || ""}`.trim() : "-");
+
     const delivery = order.deliveryMethod === "pickup" ? "استلام من المصنع" : "توصيل للمنزل";
-    const address = order.deliveryMethod === "pickup"
-      ? `${order.shippingAddress?.name || "-"} • ${order.shippingAddress?.phone || "-"}`
-      : `${order.shippingAddress?.city || "-"} • ${order.shippingAddress?.details || "-"}`;
     const paymentMethod = order.paymentMethod === "card" || order.paymentMethod === "online"
       ? "بطاقة بنكية"
       : "عند الاستلام";
 
+    const items: OrderItem[] = Array.isArray(order.cartItems) ? order.cartItems : [];
+
     return {
       orderNumber: `#${order._id.slice(-8).toUpperCase()}`,
       customerName: order.user?.name || "عميل",
-      totalPrice: `${order.totalOrderPrice?.toFixed(3)} ر.ع`,
+      customerEmail: order.user?.email || "",
+      phone: sa.phone || "",
+      totalPrice: `${order.totalOrderPrice?.toFixed(3)}`,
+      taxPrice: typeof order.taxPrice === "number" ? `${order.taxPrice.toFixed(3)}` : "",
+      shippingPrice: typeof order.shippingPrice === "number" ? `${order.shippingPrice.toFixed(3)}` : "",
       status: status.label,
+      isPaid: order.isPaid,
+      isDelivered: order.isDelivered,
       deliveryMethod: delivery,
       address,
       date: new Date(order.createdAt).toLocaleString("ar-OM"),
       paymentMethod,
+      items,
     };
   }, [order, status.label]);
 
@@ -266,13 +315,71 @@ export default function OrderDetailsModal({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <DetailCard label="اسم العميل" value={detailValues.customerName} icon={<FaUser />} />
+                {detailValues.customerEmail && (
+                  <DetailCard label="البريد الإلكتروني" value={detailValues.customerEmail} icon={<FaUser />} />
+                )}
+                {detailValues.phone && (
+                  <DetailCard label="رقم الهاتف" value={detailValues.phone} icon={<FaUser />} />
+                )}
                 <DetailCard label="المبلغ الإجمالي" value={detailValues.totalPrice} icon={<FaMoneyBillWave />} />
+                {detailValues.taxPrice && (
+                  <DetailCard label="الضريبة" value={detailValues.taxPrice} icon={<FaMoneyBillWave />} />
+                )}
+                {detailValues.shippingPrice && (
+                  <DetailCard label="الشحن" value={detailValues.shippingPrice} icon={<FaTruck />} />
+                )}
                 <DetailCard label="الحالة" value={detailValues.status} icon={<FaTag />} />
-                <DetailCard label="طريقة الاستلام" value={detailValues.deliveryMethod} icon={<FaTruck />} />
+                <DetailCard label="حالة الدفع" value={detailValues.isPaid ? "مدفوع" : "غير مدفوع"} icon={<FaCreditCard />} />
+                <DetailCard label="حالة التسليم" value={detailValues.isDelivered ? "تم التسليم" : "لم يُسلّم بعد"} icon={<FaTruck />} />
                 <DetailCard label="العنوان" value={detailValues.address} icon={<FaMapMarkerAlt />} />
                 <DetailCard label="التاريخ" value={detailValues.date} icon={<FaCalendarAlt />} />
                 <DetailCard label="طريقة الدفع" value={detailValues.paymentMethod} icon={<FaCreditCard />} />
                 <DetailCard label="رقم الطلب الكامل" value={order?._id || "-"} icon={<FaHashtag />} isMono />
+              </div>
+
+              {/* Ordered items */}
+              <div className="border-t border-dashed border-[#5C2E3A]/15 pt-4">
+                <p className="text-[11px] font-black tracking-[0.2em] text-[#5C2E3A]/70 mb-3">
+                  المنتجات المطلوبة ({detailValues.items.length})
+                </p>
+                {detailValues.items.length === 0 ? (
+                  <p className="text-sm text-gray-500 font-semibold">لا توجد منتجات مسجلة لهذا الطلب.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {detailValues.items.map((item, idx) => {
+                      const prod = typeof item.product === "object" && item.product ? item.product : undefined;
+                      const gift = typeof item.gift === "object" && item.gift ? item.gift : undefined;
+                      const name = item.name || item.title || prod?.title || gift?.title || "منتج";
+                      const qty = item.quantity ?? item.count ?? 1;
+                      const unit = item.price ?? 0;
+                      const img = item.image || prod?.imageCover || gift?.imageCover;
+                      return (
+                        <div
+                          key={item._id || idx}
+                          className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/70 px-3 py-2.5"
+                        >
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 shrink-0 border border-gray-100">
+                            {img ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={img} alt={name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                <FaTag />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 text-right">
+                            <p className="text-sm font-black text-[#1F2937] truncate">{name}</p>
+                            <p className="text-[11px] text-gray-500 font-bold">الكمية: {qty} × {unit.toLocaleString()}</p>
+                          </div>
+                          <div className="font-black text-[#5C2E3A] text-sm shrink-0">
+                            {(unit * qty).toLocaleString()}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-dashed border-[#5C2E3A]/15 pt-4">

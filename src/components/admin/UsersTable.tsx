@@ -56,7 +56,7 @@ export default function UsersTable({
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
             row.active
-              ? "bg-primary/10 text-green-800"
+              ? "bg-primary/10 text-amber-800"
               : "bg-red-100 text-red-800"
           }`}
         >

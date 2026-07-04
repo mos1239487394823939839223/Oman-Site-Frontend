@@ -4,7 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Heart from "./Heart";
-import { FaShoppingCart, FaStar } from "react-icons/fa";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardMedia,
+  Chip,
+  Rating,
+  Skeleton,
+  Stack,
+  Typography,
+} from "@mui/material";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import { Product } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
 import { useTranslation } from "react-i18next";
@@ -17,6 +29,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const [imgSrc, setImgSrc] = useState(resolveMediaUrl(product.imageCover, "products"));
+  const [imageLoading, setImageLoading] = useState(true);
 
   const handleViewDetails = () => {
     router.push(`/products/${product._id}`);
@@ -34,98 +47,150 @@ export default function ProductCard({ product }: ProductCardProps) {
   const displayPrice = hasDiscount ? product.priceAfterDiscount : product.price;
 
   return (
-    <div
+    <Card
       onClick={handleViewDetails}
-      className="group flex flex-col min-h-[360px] sm:min-h-[420px] bg-white rounded-2xl overflow-hidden cursor-pointer border border-gray-100 hover:border-[#5a1832]/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-sm"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleViewDetails();
+        }
+      }}
+      sx={{
+        minHeight: { xs: 360, sm: 420 },
+        display: "flex",
+        flexDirection: "column",
+        border: "1px solid",
+        borderColor: "divider",
+        cursor: "pointer",
+        transition: "transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease",
+        "&:hover": {
+          transform: "translateY(-4px)",
+          borderColor: "primary.light",
+          boxShadow: "0 14px 30px rgba(92, 46, 58, 0.16)",
+        },
+      }}
     >
-      {/* Image Section */}
-      <div className="relative w-full bg-gray-100 aspect-[4/3]">
+      <Box sx={{ position: "relative", width: "100%", bgcolor: "grey.100", aspectRatio: "4 / 3" }}>
+        {imageLoading && (
+          <Skeleton
+            variant="rectangular"
+            animation="wave"
+            sx={{ position: "absolute", inset: 0, zIndex: 1 }}
+          />
+        )}
+        <CardMedia sx={{ position: "absolute", inset: 0 }}>
         <Image
           src={imgSrc}
           alt={product.title}
           fill
           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-          className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+          className="object-cover object-top"
           loading="lazy"
           placeholder="blur"
           blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
           onError={() => setImgSrc("/placeholder.svg")}
+          onLoad={() => setImageLoading(false)}
         />
+        </CardMedia>
 
-        {/* Discount Badge */}
         {hasDiscount && (
-          <div className="absolute top-3 left-3 bg-green-500 text-white text-[11px] font-black px-2.5 py-1 rounded-full z-10 shadow-lg">
-            {discountPercent}%
-          </div>
+          <Chip
+            label={`-${discountPercent}%`}
+            size="small"
+            sx={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              zIndex: 2,
+              fontWeight: 800,
+              bgcolor: "secondary.main",
+              color: "primary.main",
+              "& .MuiChip-label": {
+                color: "primary.main",
+              },
+            }}
+          />
         )}
 
-        {/* Wishlist Button */}
-        <div className="absolute top-3 right-3 z-10">
+        <Box sx={{ position: "absolute", top: 10, right: 10, zIndex: 2 }}>
           <Heart
             productId={product._id}
             className="w-11 h-11 bg-[#1a1f2e]/80 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/10"
             size="sm"
           />
-        </div>
-      </div>
+        </Box>
+      </Box>
 
-      {/* Details Section */}
-      <div className="flex flex-col flex-1 p-4 gap-2">
-        {/* Brand Label */}
-        <p className="text-[11px] font-bold text-[#5a1832] uppercase tracking-widest">
+      <CardContent sx={{ display: "flex", flexDirection: "column", flex: 1, p: 2, gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", letterSpacing: "0.08em", textTransform: "uppercase" }}>
           {product.category?.name || t('seo.siteName')}
-        </p>
+        </Typography>
 
-        {/* Title - Fixed height to keep alignment */}
-        <div className="h-[40px]">
-          <h3 className="text-gray-900 font-black text-sm leading-tight line-clamp-2">
+        <Box sx={{ minHeight: 42 }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 800,
+              color: "text.primary",
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              lineHeight: 1.35,
+            }}
+          >
             {product.title}
-          </h3>
-        </div>
+          </Typography>
+        </Box>
 
-        {/* Rating - Placeholder if missing to keep height */}
-        <div className="h-[20px] flex items-center">
+        <Box sx={{ minHeight: 24, display: "flex", alignItems: "center" }}>
           {product.ratingsAverage > 0 ? (
-            <div className="flex items-center gap-1.5">
-              <FaStar className="text-yellow-400 text-sm" />
-              <span className="text-gray-500 text-[10px] font-semibold">
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
+              <Rating value={Math.min(5, product.ratingsAverage)} precision={0.1} readOnly size="small" />
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
                 ({product.ratingsQuantity || 0})
-              </span>
-            </div>
+              </Typography>
+            </Stack>
           ) : (
-            <div className="h-4" /> // Invisible placeholder
+            <Box sx={{ height: 16 }} />
           )}
-        </div>
+        </Box>
 
-        {/* Price Row - Fixed height */}
-        <div className="h-[30px] flex flex-col justify-center">
-          <div className="flex items-center gap-2">
-            <span className="text-[#5a1832] font-black text-base">
+        <Stack direction="row" spacing={1} sx={{ minHeight: 30, alignItems: "center" }}>
+          <Typography variant="h6" color="primary.main" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
               {displayPrice?.toLocaleString()}
-            </span>
-            <span className="text-gray-600 text-[10px] font-bold">ر.ع</span>
-            {hasDiscount && (
-              <span className="text-gray-400 text-[10px] line-through font-medium">
-                {product.price?.toLocaleString()}
-              </span>
-            )}
-          </div>
-        </div>
+          </Typography>
+          {hasDiscount && (
+            <Typography variant="caption" color="text.disabled" sx={{ textDecoration: "line-through" }}>
+              {product.price?.toLocaleString()}
+            </Typography>
+          )}
+        </Stack>
 
-        {/* Button */}
-        <div className="mt-auto pt-2">
-          <button
+        <Box sx={{ mt: "auto", pt: 1 }}>
+          <Button
             onClick={(e) => {
               e.stopPropagation();
               handleViewDetails();
             }}
-            className="w-full bg-[#5a1832] hover:bg-[#4A2330] text-white font-black py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 active:scale-95 text-xs shadow-md"
+            fullWidth
+            variant="contained"
+            startIcon={<ShoppingCartOutlinedIcon />}
+            aria-label={`${t('common.viewDetails')} ${product.title}`}
+            sx={{
+              borderRadius: 2.5,
+              fontWeight: 800,
+              py: 1.1,
+              transition: "transform 180ms ease",
+              "&:active": { transform: "scale(0.98)" },
+            }}
           >
-            <FaShoppingCart className="text-xs" />
             {t('common.viewDetails')}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </Box>
+      </CardContent>
+    </Card>
   );
 }

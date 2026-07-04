@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import {
   getCart,
   addToCart as addToCartAPI,
@@ -56,8 +56,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cartTotalAfterDiscount, setCartTotalAfterDiscount] = useState<number | undefined>(undefined);
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   function applyCartData(data: any) {
+    if (!isMountedRef.current) return;
     // Backend returns { data: { cartItems: [...], totalCartPrice: N } }
     // Fallbacks: flat { cartItems: [...] } or { data: [] } (empty)
     const cartData = (data?.data && !Array.isArray(data.data)) ? data.data : data;
@@ -79,6 +88,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const refreshCart = useCallback(async () => {
     const token = getToken();
     if (!token) {
+      if (!isMountedRef.current) return;
       setCartItems([]);
       setCartCount(0);
       setCartTotal(0);
@@ -86,15 +96,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
+      if (!isMountedRef.current) return;
       setLoading(true);
       const data = await getCart(token);
       applyCartData(data);
     } catch {
+      if (!isMountedRef.current) return;
       setCartItems([]);
       setCartCount(0);
       setCartTotal(0);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }, []);
 
@@ -111,13 +123,43 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const token = getToken();
     if (!token) throw new LoginRequiredError();
     try {
+      if (!isMountedRef.current) return;
       setLoading(true);
-      const data = await addToCartAPI(itemId, token, options);
+      const data = await addToCartAPI(itemId, token, { ...options, color });
+      if (!isMountedRef.current) return;
       applyCartData(data);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
+  };
+
+  /**
+   * Re-sync totals after a cart mutation (add qty, remove item, …).
+   * When a coupon is applied, the discount depends on the current line
+   * quantities/items, so we must re-apply it server-side to recalculate —
+   * otherwise cartTotalAfterDiscount (and per-line prices for scoped coupons)
+   * go stale. Falls back to the mutation's plain totals when no coupon is set
+   * or the coupon is no longer valid.
+   */
+  const syncTotalsAfterMutation = async (mutationData: any, token: string) => {
+    if (!isMountedRef.current) return;
+    if (appliedCoupon) {
+      try {
+        const couponData = await applyCouponAPI(appliedCoupon, token);
+        if (!isMountedRef.current) return;
+        applyCartData(couponData);
+        return;
+      } catch {
+        if (!isMountedRef.current) return;
+        // Coupon expired / no longer applicable — drop it and use plain totals.
+        setAppliedCoupon(null);
+        setCartTotalAfterDiscount(undefined);
+      }
+    }
+    const cartData = (mutationData?.data && !Array.isArray(mutationData.data)) ? mutationData.data : mutationData;
+    if (!isMountedRef.current) return;
+    if (cartData?.totalCartPrice !== undefined) setCartTotal(cartData.totalCartPrice);
   };
 
   const removeFromCart = async (itemId: string) => {
@@ -131,9 +173,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return next;
       });
       const data = await removeCartItem(itemId, token);
-      const cartData = (data?.data && !Array.isArray(data.data)) ? data.data : data;
-      const newTotal = cartData?.totalCartPrice;
-      if (newTotal !== undefined) setCartTotal(newTotal);
+      await syncTotalsAfterMutation(data, token);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } catch {
       // On error, refresh to get back to consistent state
@@ -150,9 +190,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         item._id === itemId ? { ...item, count: quantity } : item
       ));
       const data = await updateCartItemAPI(itemId, quantity, token);
-      const cartData = (data?.data && !Array.isArray(data.data)) ? data.data : data;
-      const newTotal = cartData?.totalCartPrice;
-      if (newTotal !== undefined) setCartTotal(newTotal);
+      await syncTotalsAfterMutation(data, token);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } catch {
       // On error, refresh to get back to consistent state
@@ -164,8 +202,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const token = getToken();
     if (!token) return;
     try {
+      if (!isMountedRef.current) return;
       setLoading(true);
       await clearCartAPI(token);
+      if (!isMountedRef.current) return;
       setCartItems([]);
       setCartCount(0);
       setCartTotal(0);
@@ -173,7 +213,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setAppliedCoupon(null);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   };
 
@@ -185,8 +225,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const token = getToken();
     if (!token) throw new Error('LOGIN_REQUIRED');
     try {
+      if (!isMountedRef.current) return { discount: 0 };
       setLoading(true);
       const data = await applyCouponAPI(coupon, token);
+      if (!isMountedRef.current) return { discount: 0 };
       applyCartData(data);
       const cartData = (data?.data && !Array.isArray(data.data)) ? data.data : data;
       const before = cartData?.totalCartPrice ?? 0;
@@ -195,7 +237,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setAppliedCoupon(coupon.toUpperCase());
       return { discount };
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   };
 

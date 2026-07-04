@@ -123,6 +123,15 @@ export const adminApi = {
   deleteCategory: (id: string) =>
     apiRequest(`/categories/${id}`, { method: "DELETE" }),
 
+  // Services (home page highlights) — JSON only, icon is an emoji string
+  getAllServices: () => apiRequest("/services"),
+  createService: (data: Record<string, unknown>) =>
+    apiRequest("/services", { method: "POST", body: JSON.stringify(data) }),
+  updateService: (id: string, data: Record<string, unknown>) =>
+    apiRequest(`/services/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteService: (id: string) =>
+    apiRequest(`/services/${id}`, { method: "DELETE" }),
+
   // ─── Subcategories ─────────────────────────────────────────────────────────
   getAllSubcategories: () => apiRequest("/subcategories"),
   getSubcategory: (id: string) => apiRequest(`/subcategories/${id}`),
@@ -205,7 +214,14 @@ export const adminApi = {
   // ─── Coupons ───────────────────────────────────────────────────────────────
   getAllCoupons: () => apiRequest("/coupons"),
   getCoupon: (id: string) => apiRequest(`/coupons/${id}`),
-  createCoupon: (data: { name: string; expire: string; discount: number }) =>
+  createCoupon: (data: {
+    name: string;
+    expire: string;
+    discount: number;
+    // Optional scope — omit both for a cart-wide coupon.
+    product?: string;
+    category?: string;
+  }) =>
     apiRequest("/coupons", { method: "POST", body: JSON.stringify(data) }),
   updateCoupon: (id: string, data: Record<string, any>) =>
     apiRequest(`/coupons/${id}`, {
@@ -218,10 +234,13 @@ export const adminApi = {
   // ─── Orders ────────────────────────────────────────────────────────────────
   getAllOrders: () => apiRequest("/orders"),
   getOrder: (id: string) => apiRequest(`/orders/${id}`),
+  // Optional: server-provided status options ({ value, labelEn, labelAr }).
+  getOrderStatuses: () => apiRequest("/orders/statuses"),
+  // Dedicated status endpoint: PUT /orders/:id/status  { status }
   updateOrderStatus: (id: string, status: string) =>
-    apiRequest(`/orders/${id}`, {
+    apiRequest(`/orders/${id}/status`, {
       method: "PUT",
-      body: JSON.stringify({ orderStatus: status }),
+      body: JSON.stringify({ status }),
     }),
 
   // ─── Reviews (admin moderation) ────────────────────────────────────────────

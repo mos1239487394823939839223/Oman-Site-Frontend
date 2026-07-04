@@ -260,7 +260,7 @@ export default function ProductForm({
       </div>
 
       {isGift && (
-        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
           Gifts are always free — price is set to 0 automatically on the server.
         </p>
       )}

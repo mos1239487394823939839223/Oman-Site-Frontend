@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      await resetPassword(formData.email, formData.newPassword);
+      await resetPassword(formData.email, formData.newPassword, formData.confirmPassword);
       setSuccess(true);
       // Clear the verification flag
       localStorage.removeItem('resetEmail');

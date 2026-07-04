@@ -1,13 +1,14 @@
 "use client";
 
 import DataTable, { Column } from "./DataTable";
-import { FaEye, FaCheckCircle, FaTimesCircle, FaClock, FaTruck, FaWarehouse, FaCreditCard, FaMoneyBillWave } from "react-icons/fa";
+import { FaEye, FaTruck, FaWarehouse, FaCreditCard, FaMoneyBillWave } from "react-icons/fa";
 
 interface Order {
   _id: string;
   user?: { name: string; email: string; };
   totalOrderPrice: number;
-  orderStatus: string;
+  status?: string;
+  orderStatus?: string;
   createdAt: string;
   paymentMethod?: string;
   deliveryMethod?: string;
@@ -27,17 +28,19 @@ interface OrdersTableProps {
 }
 
 const getStatusBadge = (status: string) => {
-  const map: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
-    delivered:  { color: "bg-green-100 text-green-800",  icon: <FaCheckCircle />, label: "تم التسليم" },
-    completed:  { color: "bg-green-100 text-green-800",  icon: <FaCheckCircle />, label: "مكتمل" },
-    pending:    { color: "bg-yellow-100 text-yellow-800", icon: <FaClock />,       label: "قيد الانتظار" },
-    cancelled:  { color: "bg-red-100 text-red-800",      icon: <FaTimesCircle />, label: "ملغي" },
-    processing: { color: "bg-blue-100 text-blue-800",    icon: <FaClock />,       label: "جاري التجهيز" },
+  const map: Record<string, { color: string; label: string }> = {
+    delivered:  { color: "bg-amber-100 text-amber-800", label: "تم التسليم" },
+    completed:  { color: "bg-amber-100 text-amber-800", label: "مكتمل" },
+    pending:    { color: "bg-yellow-100 text-yellow-800", label: "قيد الانتظار" },
+    confirmed:  { color: "bg-[#5C2E3A]/10 text-[#5C2E3A]", label: "مؤكد" },
+    processing: { color: "bg-blue-100 text-blue-800", label: "جاري التجهيز" },
+    shipped:    { color: "bg-indigo-100 text-indigo-800", label: "تم الشحن" },
+    cancelled:  { color: "bg-red-100 text-red-800", label: "ملغي" },
   };
-  const cfg = map[status?.toLowerCase()] || { color: "bg-gray-100 text-gray-700", icon: <FaClock />, label: status };
+  const cfg = map[status?.toLowerCase()] || { color: "bg-gray-100 text-gray-700", label: status };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${cfg.color}`}>
-      {cfg.icon} {cfg.label}
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${cfg.color}`}>
+      {cfg.label}
     </span>
   );
 };
@@ -108,14 +111,13 @@ export default function OrdersTable({ orders, loading = false, onView, onStatusU
       accessor: (row) => (
         <div>
           <span className="font-black text-[#5C2E3A] text-base">{row.totalOrderPrice?.toFixed(3)}</span>
-          <span className="text-xs text-gray-400 mr-1">ر.ع</span>
         </div>
       ),
       sortable: true,
     },
     {
       header: "الحالة",
-      accessor: (row) => getStatusBadge(row.orderStatus),
+      accessor: (row) => getStatusBadge(row.status || row.orderStatus || "pending"),
       sortable: true,
     },
     {

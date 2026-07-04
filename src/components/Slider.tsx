@@ -148,16 +148,6 @@ export default function Slider() {
           </button>
         </div>
 
-        <div className="hidden md:flex gap-2 pointer-events-auto">
-          {banners.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => { setCurrentSlide(i); setIsAutoPlaying(false); }}
-              className={`h-2 rounded-full transition-all duration-500 ${i === currentSlide ? 'w-12 bg-[#D4AF37]' : 'w-2 bg-white/30 hover:bg-white/50'}`}
-              aria-label={`Go to slide ${i + 1}`}
-            />
-          ))}
-        </div>
       </div>
     </div>
   );

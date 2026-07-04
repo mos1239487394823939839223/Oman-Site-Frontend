@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { signin, signup, forgotPassword, verifyResetCode, resetPassword as apiResetPassword, User } from '@/services/clientApi';
+import { signin, signup, forgotPassword, verifyResetCode, resetPassword as apiResetPassword, logout as apiLogout, User } from '@/services/clientApi';
 
 interface AuthContextType {
   user: User | null;
@@ -11,7 +11,7 @@ interface AuthContextType {
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   verifyResetCode: (resetCode: string) => Promise<void>;
-  resetPassword: (email: string, newPassword: string) => Promise<void>;
+  resetPassword: (email: string, newPassword: string, newPasswordConfirm: string) => Promise<void>;
   checkTokenValidity: () => boolean;
   loading: boolean;
 }
@@ -102,6 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    const token = localStorage.getItem('token');
+    // Best-effort server-side token invalidation; don't block the UI on it.
+    if (token) apiLogout(token).catch(() => {});
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
@@ -115,8 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await verifyResetCode(resetCode);
   };
 
-  const handleResetPassword = async (email: string, newPassword: string) => {
-    await apiResetPassword(email, newPassword);
+  const handleResetPassword = async (email: string, newPassword: string, newPasswordConfirm: string) => {
+    await apiResetPassword(email, newPassword, newPasswordConfirm);
   };
 
   return (

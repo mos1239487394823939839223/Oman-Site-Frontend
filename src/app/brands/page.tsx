@@ -74,7 +74,7 @@ export default function BrandsPage() {
           <h1 className="text-3xl font-bold text-primary mb-2">All Brands</h1>
           <p className="text-gray-600">{filteredBrands.length} of {brands.length} brands available</p>
           <div className="mt-4 flex justify-center">
-            <div className="bg-primary/10 text-green-800 px-4 py-2 rounded-full text-sm font-medium">
+            <div className="bg-primary/10 text-amber-800 px-4 py-2 rounded-full text-sm font-medium">
               🏷️ {filteredBrands.length} Premium Brands
             </div>
           </div>

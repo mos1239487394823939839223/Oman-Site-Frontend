@@ -2,9 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Product, Category, getProducts, getCategories } from "@/services/clientApi";
+import { Product, Category, getProducts, getCategories, getServices } from "@/services/clientApi";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
+
+interface Service {
+  _id?: string;
+  id?: string;
+  title?: string;
+  titleAr?: string;
+  description?: string;
+  descriptionAr?: string;
+  icon?: string;
+  active?: boolean;
+}
 import { FaStar, FaShoppingCart, FaUserCircle } from "react-icons/fa";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
@@ -13,11 +24,12 @@ import SearchBar from "@/components/SearchBar";
 import CategoriesBar from "@/components/CategoriesBar";
 import Heart from "@/components/Heart";
 import { resolveMediaUrl } from "@/lib/media";
+import { useAppSnackbar } from "@/components/mui/AppSnackbarProvider";
 
 export default function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -27,6 +39,11 @@ export default function HomePageContent() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [displayedProducts, setDisplayedProducts] = useState(20);
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const { showSnackbar } = useAppSnackbar();
+  // Match the language the rest of the page renders in (react-i18next),
+  // not useLanguage() — the two can diverge and would show the wrong locale.
+  const isArabic = i18n.language?.startsWith("ar");
 
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
@@ -72,6 +89,16 @@ export default function HomePageContent() {
     }
   };
 
+  const fetchServices = async () => {
+    try {
+      const response = await getServices();
+      const list: Service[] = response?.data || response || [];
+      setServices(Array.isArray(list) ? list.filter((s) => s.active !== false) : []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
   useEffect(() => {
     const search = searchParams.get('search');
     if (search) setSearchQuery(search);
@@ -81,6 +108,7 @@ export default function HomePageContent() {
     fetchProducts();
     fetchCategories();
     fetchBestSellers();
+    fetchServices();
   }, []);
 
   useEffect(() => {
@@ -94,16 +122,10 @@ export default function HomePageContent() {
     }
     try {
       await addToCart(productId);
-      const notification = document.createElement('div');
-      notification.className = 'fixed top-4 right-4 bg-[#5a1832] text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300';
-      notification.textContent = t('home.addedToCart');
-      document.body.appendChild(notification);
-      setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => document.body.removeChild(notification), 300);
-      }, 3000);
+      showSnackbar(t("home.addedToCart"), "success");
     } catch (error) {
       console.error('Error adding to cart:', error);
+      showSnackbar(t("common.retry"), "error");
     }
   };
 
@@ -170,10 +192,10 @@ export default function HomePageContent() {
       </section>
 
       {/* Featured Section */}
-      <section className="max-w-7xl mx-auto px-4 py-12 sm:py-16 lg:py-20">
+      <section className="max-w-7xl mx-auto px-4 py-8 sm:py-10 lg:py-12">
         <div className="bg-[#5a1832] rounded-[2.5rem] sm:rounded-[3.5rem] overflow-hidden shadow-2xl">
-          <div className="p-6 sm:p-10 md:p-16 lg:p-20">
-            <div className="text-center mb-16">
+          <div className="p-6 sm:p-8 md:p-10 lg:p-12">
+            <div className="text-center mb-8">
               <span className="bg-white/10 text-[#D4AF37] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 inline-block border border-white/10">{t('home.newCollection')}</span>
               <h2 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white !important mb-6" style={{ color: 'white' }}>{t('home.bestSellers')}</h2>
               <div className="w-24 h-2 bg-[#D4AF37] mx-auto rounded-full"></div>
@@ -202,7 +224,7 @@ export default function HomePageContent() {
                     </div>
                     <h3 className="text-xl font-black text-gray-900 mb-2 truncate">{product.title}</h3>
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl font-black text-[#5a1832]">{product.price?.toLocaleString()} ر.ع</span>
+                      <span className="text-2xl font-black text-[#5a1832]">{product.price?.toLocaleString()}</span>
                       <button
                         onClick={() => handleAddToCart(product._id)}
                         className="w-12 h-12 bg-[#5a1832] text-white rounded-2xl flex items-center justify-center hover:bg-[#D4AF37] transition-all active:scale-90"
@@ -221,7 +243,7 @@ export default function HomePageContent() {
               )}
             </div>
 
-            <div className="text-center mt-16">
+            <div className="text-center mt-8">
               <button
                 onClick={() => router.push('/products')}
                 className="bg-white text-[#5a1832] px-10 sm:px-12 py-4 sm:py-5 rounded-full font-black text-lg hover:bg-[#D4AF37] transition-all shadow-xl active:scale-95"
@@ -240,6 +262,31 @@ export default function HomePageContent() {
           </div>
         </div>
       </section>
+
+      {/* Our Services */}
+      {services.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 py-12 sm:py-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#5a1832]">{t('home.ourServices')}</h2>
+            <div className="w-24 h-2 bg-[#D4AF37] mx-auto rounded-full mt-6"></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {services.map((s, i) => {
+              const title = isArabic ? (s.titleAr || s.title) : (s.title || s.titleAr);
+              const desc = isArabic ? (s.descriptionAr || s.description) : (s.description || s.descriptionAr);
+              return (
+                <div
+                  key={s._id || s.id || i}
+                  className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <h3 className="text-lg font-black text-gray-900 mb-2">{title}</h3>
+                  {desc && <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

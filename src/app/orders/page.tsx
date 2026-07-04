@@ -169,7 +169,7 @@ export default function OrdersPage() {
                     
                     <div className="flex flex-wrap gap-2">
                       {order.isPaid ? (
-                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-50 text-emerald-600 border border-emerald-100">
+                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-50 text-amber-600 border border-amber-100">
                           <FaCheckCircle className="w-3.5 h-3.5" />
                           {isAr ? 'مدفوع' : 'Paid'}
                         </span>
@@ -214,7 +214,7 @@ export default function OrdersPage() {
 
                     <div className="col-span-2 md:col-span-1 space-y-1">
                       <div className="text-gray-400 text-xs font-black">{isAr ? 'إجمالي الطلب' : 'Total Amount'}</div>
-                      <p className="text-xl font-black text-[#6f1e3d]">{totalPrice.toLocaleString()} {isAr ? 'ر.ع' : 'OMR'}</p>
+                      <p className="text-xl font-black text-[#6f1e3d]">{totalPrice.toLocaleString()}</p>
                     </div>
                   </div>
 
@@ -242,8 +242,7 @@ export default function OrdersPage() {
                               <div className="text-right">
                                 <h5 className="font-bold text-gray-800 text-sm truncate">{productTitle}</h5>
                                 <p className="text-xs text-gray-400 font-bold mt-1">
-                                  {isAr ? 'الكمية:' : 'Qty:'} {itemQty} × {itemPrice.toLocaleString()} {isAr ? 'ر.ع' : 'OMR'}
-                                </p>
+                                  {isAr ? 'الكمية:' : 'Qty:'} {itemQty} × {itemPrice.toLocaleString()}                                </p>
                               </div>
                             </div>
                           </div>

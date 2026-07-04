@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import {
   getWishlist,
   addToWishlist as addToWishlistAPI,
@@ -30,25 +30,37 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlistItems, setWishlistItems] = useState<Product[]>([]);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchWishlist = useCallback(async () => {
     const token = getToken();
     if (!token) {
+      if (!isMountedRef.current) return;
       setWishlistItems([]);
       setWishlistCount(0);
       return;
     }
     try {
+      if (!isMountedRef.current) return;
       setLoading(true);
       const response = await getWishlist(token);
+      if (!isMountedRef.current) return;
       const items: Product[] = response?.data ?? [];
       setWishlistItems(items);
       setWishlistCount(items.length);
     } catch {
+      if (!isMountedRef.current) return;
       setWishlistItems([]);
       setWishlistCount(0);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }, []);
 
@@ -60,11 +72,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const token = getToken();
     if (!token) return;
     try {
+      if (!isMountedRef.current) return;
       setLoading(true);
       await addToWishlistAPI(productId, token);
       await fetchWishlist();
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }, [fetchWishlist]);
 
@@ -72,11 +85,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const token = getToken();
     if (!token) return;
     try {
+      if (!isMountedRef.current) return;
       setLoading(true);
       await removeFromWishlistAPI(productId, token);
       await fetchWishlist();
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }, [fetchWishlist]);
 

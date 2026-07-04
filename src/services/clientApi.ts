@@ -129,6 +129,12 @@ export async function getProducts(params?: Record<string, string>) {
   return res.json();
 }
 
+export async function getServices() {
+  const res = await fetch(`${API_BASE}/services`, { cache: 'no-store' });
+  if (!res.ok) throw new Error("Failed to fetch services");
+  return res.json();
+}
+
 export async function getProduct(productId: string) {
   const res = await fetch(`${API_BASE}/products/${productId}`, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch product");
@@ -326,6 +332,15 @@ export async function signin(data: { email: string; password: string }) {
   return res.json();
 }
 
+export async function logout(token: string) {
+  const res = await fetch(`${API_BASE}/auth/logout`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to log out");
+  return readJsonSafe(res);
+}
+
 export async function forgotPassword(email: string) {
   const res = await fetch(`${API_BASE}/auth/forgetPassword`, {
     method: "POST",
@@ -383,14 +398,7 @@ export async function addToWishlist(productId: string, token: string) {
 }
 
 export async function getWishlist(token: string) {
-  if (token && token.startsWith('local_admin_token_')) {
-    return {
-      status: "success",
-      data: []
-    };
-  }
-
-  const res = await fetch(`${API_BASE}/wishlist`, { 
+  const res = await fetch(`${API_BASE}/wishlist`, {
     headers: { "Authorization": `Bearer ${token}` } 
   });
 
@@ -458,21 +466,14 @@ export async function removeAddress(addressId: string, token: string) {
 export async function addToCart(
   itemId: string,
   token: string,
-  options?: { isGift?: boolean }
+  options?: { isGift?: boolean; color?: string }
 ) {
   try {
-    // Check if token is a local admin token (mock token)
-    if (token && token.startsWith('local_admin_token_')) {
-      console.warn("addToCart: Local admin token detected - cart operations require real API authentication");
-      return {
-        status: "success",
-        message: "Cart operations require real API authentication. Please login with a real account for cart features."
-      };
-    }
-
-    const body = options?.isGift
+    // Send either productId or giftId (never both), plus optional color.
+    const body: Record<string, string> = options?.isGift
       ? { giftId: itemId }
       : { productId: itemId };
+    if (options?.color) body.color = options.color;
 
     const res = await fetch(`${API_BASE}/cart`, {
       method: "POST",
@@ -505,17 +506,7 @@ export async function addToCart(
 
 export async function getCart(token: string) {
   try {
-    // Check if token is a local admin token (mock token)
-    if (token && token.startsWith('local_admin_token_')) {
-      console.warn("getCart: Local admin token detected - returning empty cart (cart features require real API authentication)");
-      return {
-        status: "success",
-        data: []
-      };
-    }
 
-
-    
     const res = await fetch(`${API_BASE}/cart`, { 
       headers: { "Authorization": `Bearer ${token}` } 
     });
@@ -627,10 +618,9 @@ export async function clearCart(token: string) {
         throw new Error(`Failed to clear cart: ${res.status} ${res.statusText}`);
       }
     }
-    
-    const data = await res.json();
 
-    return data;
+    // DELETE /cart returns 204 No Content (empty body) — don't call res.json().
+    return readJsonSafe(res);
   } catch (error) {
     if (error instanceof Error) throw error;
     throw new Error("Network error. Please check your connection.");
@@ -638,29 +628,62 @@ export async function clearCart(token: string) {
 }
 
 
-export async function createCart(token?: string) {
-  console.warn('createCart: Cart creation is not needed - cart is created automatically when items are added');
-  
+/**
+ * Parse a response body as JSON, tolerating an empty body.
+ * Some order/payment endpoints return 200/201 with no content on success,
+ * which makes a bare `res.json()` throw "Unexpected end of JSON input".
+ * Falls back to a `{ status: "success" }` shape so callers that check
+ * `response.status === "success"` still work.
+ */
+async function readJsonSafe(res: Response): Promise<any> {
+  const text = await res.text();
+  if (!text) return { status: "success", data: {} };
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { status: "success", data: {} };
+  }
+}
+
+/**
+ * Map a frontend shipping address (which uses `details`, `phone`, `name`, …)
+ * into the shape the backend order API expects: `{ address, city, postalCode, country }`.
+ */
+export function toBackendShippingAddress(sa: any = {}): {
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+} {
   return {
-    status: "success",
-    data: {
-      _id: `cart_${Date.now()}`,
-      message: "Cart will be created automatically when items are added"
-    }
+    address: sa.address || sa.details || "",
+    city: sa.city || "",
+    postalCode: sa.postalCode || "",
+    country: sa.country || "Oman",
   };
 }
 
-export async function createCashOrder(cartId: string, data: any, token: string) {
+export async function createCashOrder(
+  cartId: string,
+  data: { shippingAddress?: any },
+  token: string
+) {
   const res = await fetch(`${API_BASE}/orders/${cartId}`, {
     method: "POST",
-        headers: {
-      "Content-Type": "application/json", 
-      "Authorization": `Bearer ${token}` 
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      shippingAddress: toBackendShippingAddress(data?.shippingAddress),
+    }),
   });
   if (!res.ok) throw new Error("Failed to create cash order");
-  return res.json();
+  const raw = await readJsonSafe(res);
+  // Backend returns `{ message, debugger: <order> }`; normalize to the
+  // `{ status, data }` shape the rest of the app expects.
+  const order = raw?.debugger ?? raw?.data ?? {};
+  return { status: "success", data: order, message: raw?.message };
 }
 
 export async function getAllOrders() {
@@ -677,33 +700,26 @@ export async function getUserOrders(userId: string, token: string) {
   return res.json();
 }
 
-export async function createCheckoutSession(cartId: string, data: any, token: string) {
+/**
+ * Create a Stripe checkout session for the card-payment flow.
+ * Backend: `GET /orders/checkout-session/:cartId` → `{ session: { url, ... } }`.
+ * Returns the raw `{ session }` payload; caller redirects to `session.url`.
+ */
+export async function createCheckoutSession(cartId: string, token: string) {
   try {
-    const url = `${API_BASE}/orders/checkout-session/${cartId}?url=${window.location.origin}`;
-    
-    const res: Response = await fetch(url, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json", 
-        "Authorization": `Bearer ${token}` 
-      },
-      body: JSON.stringify(data),
-    });
-    
+    const res: Response = await fetch(
+      `${API_BASE}/orders/checkout-session/${cartId}`,
+      { headers: { "Authorization": `Bearer ${token}` } }
+    );
+
     if (!res.ok) {
-      let errorData = {};
-      try {
-        const errorText = await res.text();
-        errorData = JSON.parse(errorText);
-      } catch (parseError) {
-        // Silently fail parse
-      }
-      
-      throw new Error(`Failed to create checkout session: ${res.status} ${res.statusText}`);
+      const err = await res.json().catch(() => ({} as any));
+      throw new Error(
+        err?.message || `Failed to create checkout session: ${res.status} ${res.statusText}`
+      );
     }
-    
-    const responseData = await res.json();
-    return responseData;
+
+    return readJsonSafe(res);
   } catch (error) {
     if (error instanceof Error) throw error;
     throw new Error("Network error. Please check your connection.");
@@ -739,8 +755,8 @@ export async function createVisaOrder(cartId: string, paymentData: {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.message || "Failed to process visa payment");
   }
-  
-  return res.json();
+
+  return readJsonSafe(res);
 }
 
 // Mock Visa Payment API (for testing)
@@ -838,16 +854,21 @@ export async function deactivateMyAccount(token: string) {
     headers: { "Authorization": `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("Failed to deactivate account");
-  return res.json();
+  // DELETE returns 204 No Content (empty body).
+  return readJsonSafe(res);
 }
 
 // ─── Auth – Reset Password ────────────────────────────────────────────────────
 
-export async function resetPassword(email: string, newPassword: string) {
+export async function resetPassword(
+  email: string,
+  newPassword: string,
+  newPasswordConfirm: string
+) {
   const res = await fetch(`${API_BASE}/auth/resetPassword`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, newPassword }),
+    body: JSON.stringify({ email, newPassword, newPasswordConfirm }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -902,7 +923,8 @@ export async function deleteReview(reviewId: string, token: string) {
     headers: { "Authorization": `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("Failed to delete review");
-  return res.json();
+  // DELETE returns 204 No Content (empty body).
+  return readJsonSafe(res);
 }
 
 // ─── Cart – Apply Coupon ──────────────────────────────────────────────────────

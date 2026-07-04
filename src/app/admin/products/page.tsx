@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminSidebar from "@/components/admin/AdminSidebar";
-import AdminHeader from "@/components/admin/AdminHeader";
 import ConfirmModal from "@/components/admin/ConfirmModal";
 import { useToast } from "@/components/admin/ToastProvider";
 import { adminApi } from "@/services/adminApi";
@@ -14,7 +12,6 @@ import {
 } from "react-icons/fa";
 
 export default function ProductsManagementPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
@@ -51,7 +48,7 @@ export default function ProductsManagementPage() {
     }
   };
 
-  const filtered = products.filter(p => 
+  const filtered = products.filter(p =>
     !search || p.title?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -88,103 +85,96 @@ export default function ProductsManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white">
-      <AdminHeader onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-      <div className="flex">
-        <AdminSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 p-5 lg:p-8">
-
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-2xl font-black">My Products</h1>
-              <p className="text-xs font-bold text-gray-500 mt-1">{products.length} products total</p>
-            </div>
-            {!showForm && (
-              <button onClick={() => { setEditingProduct(null); setShowForm(true); }}
-                className="flex items-center gap-2 bg-[#c5a059] hover:bg-[#e6c35f] text-[#0a0f1a] px-4 py-2.5 rounded-xl font-black text-sm transition-all">
-                <FaPlus className="w-3.5 h-3.5" /> Add Product
-              </button>
-            )}
-          </div>
-
-          {!showForm && (
-            <div className="relative max-w-md mb-6">
-              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search your products..."
-                className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white text-sm focus:outline-none focus:border-[#c5a059]/40 placeholder-gray-600" />
-            </div>
-          )}
-
-          {showForm ? (
-            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-black">{editingProduct ? "Edit Product" : "Create New Product"}</h2>
-                <button onClick={() => { setShowForm(false); setEditingProduct(null); }}
-                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded-xl">
-                  <FaTimes className="w-4 h-4" />
-                </button>
-              </div>
-              <ProductForm product={editingProduct || undefined} categories={categories} subcategories={subcategories} brands={brands}
-                onSubmit={handleFormSubmit} onCancel={() => { setShowForm(false); setEditingProduct(null); }}
-                loading={formLoading} />
-            </div>
-          ) : loading ? (
-            <div className="space-y-3">
-              {[...Array(6)].map((_, i) => <div key={i} className="h-20 bg-white/[0.02] border border-white/5 rounded-xl animate-pulse" />)}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-20 text-gray-600">
-              <FaBox className="w-12 h-12 mx-auto mb-4 opacity-20" />
-              <p className="font-bold text-lg">No products found</p>
-            </div>
-          ) : (
-            <div className="bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden">
-              <div className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center px-5 py-3 border-b border-white/5 bg-white/[0.02] text-[10px] font-black uppercase tracking-widest text-gray-600">
-                <span>Image</span>
-                <span>Product</span>
-                <span className="text-right">Price</span>
-                <span className="text-right">Actions</span>
-              </div>
-              <div className="divide-y divide-white/[0.03]">
-                {filtered.map((product) => (
-                  <div key={product._id} className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center px-5 py-4 hover:bg-white/[0.02] transition-colors">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
-                      <img src={product.imageCover || '/placeholder.svg'} alt={product.title} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-white font-bold text-sm truncate">{product.title}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="flex items-center gap-1 text-[10px] font-black text-[#c5a059] uppercase"><FaDatabase className="w-2 h-2"/> Dashboard Product</span>
-                        {product.isRecommended && (
-                          <span className="flex items-center gap-1 text-[10px] font-black text-yellow-500 uppercase bg-yellow-500/10 px-1.5 py-0.5 rounded-md">
-                            <FaStar className="w-2 h-2"/> Best Seller
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right text-white font-black text-sm">
-                      {product.price?.toLocaleString()} <span className="text-[10px] text-gray-500">OMR</span>
-                    </div>
-                    <div className="flex items-center gap-2 justify-end">
-                      <button onClick={() => { setEditingProduct(product); setShowForm(true); }} className="w-8 h-8 flex items-center justify-center bg-[#c5a059]/10 text-[#c5a059] rounded-lg hover:bg-[#c5a059]/20 transition-colors">
-                        <FaEdit className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => setDeleteTarget(product)} className="w-8 h-8 flex items-center justify-center bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors">
-                        <FaTrash className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </main>
+    <>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">Products</h1>
+          <p className="text-xs font-semibold text-gray-500 mt-1">{products.length} products total</p>
+        </div>
+        {!showForm && (
+          <button onClick={() => { setEditingProduct(null); setShowForm(true); }}
+            className="flex items-center gap-2 bg-[#5C2E3A] hover:bg-[#4A2330] text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm">
+            <FaPlus className="w-3.5 h-3.5" /> Add Product
+          </button>
+        )}
       </div>
+
+      {!showForm && (
+        <div className="relative max-w-md mb-6">
+          <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
+            className="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-gray-900 text-sm focus:outline-none focus:border-[#5C2E3A]/60 placeholder-gray-400 shadow-sm" />
+        </div>
+      )}
+
+      {showForm ? (
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-black text-gray-900">{editingProduct ? "Edit Product" : "Create New Product"}</h2>
+            <button onClick={() => { setShowForm(false); setEditingProduct(null); }}
+              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+              <FaTimes className="w-4 h-4" />
+            </button>
+          </div>
+          <ProductForm product={editingProduct || undefined} categories={categories} subcategories={subcategories} brands={brands}
+            onSubmit={handleFormSubmit} onCancel={() => { setShowForm(false); setEditingProduct(null); }}
+            loading={formLoading} />
+        </div>
+      ) : loading ? (
+        <div className="space-y-3">
+          {[...Array(6)].map((_, i) => <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20 text-gray-400">
+          <FaBox className="w-12 h-12 mx-auto mb-4 opacity-30" />
+          <p className="font-bold text-lg">No products found</p>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center px-5 py-3 border-b border-gray-100 bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-500">
+            <span>Image</span>
+            <span>Product</span>
+            <span className="text-right">Price</span>
+            <span className="text-right">Actions</span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {filtered.map((product) => (
+              <div key={product._id} className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center px-5 py-4 hover:bg-gray-50 transition-colors">
+                <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                  <img src={product.imageCover || '/placeholder.svg'} alt={product.title} className="w-full h-full object-cover" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-gray-900 font-semibold text-sm truncate">{product.title}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-[#5C2E3A] uppercase"><FaDatabase className="w-2 h-2" /> Product</span>
+                    {product.isRecommended && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-[#5C2E3A] uppercase bg-[#5C2E3A]/10 px-1.5 py-0.5 rounded-md border border-[#5C2E3A]/15">
+                        <FaStar className="w-2 h-2" /> Best Seller
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right text-gray-900 font-bold text-sm">
+                  {product.price?.toLocaleString()}
+                </div>
+                <div className="flex items-center gap-2 justify-end">
+                  <button onClick={() => { setEditingProduct(product); setShowForm(true); }} className="w-8 h-8 flex items-center justify-center bg-[#5C2E3A]/10 text-[#5C2E3A] rounded-lg hover:bg-[#5C2E3A]/15 transition-colors border border-[#5C2E3A]/15">
+                    <FaEdit className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => setDeleteTarget(product)} className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors border border-red-100">
+                    <FaTrash className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ConfirmModal isOpen={!!deleteTarget} title="Delete Product"
         message={`Permanently delete "${deleteTarget?.title}"? This cannot be undone.`}
         confirmText="Delete" cancelText="Cancel"
         onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} isDanger />
-    </div>
+    </>
   );
 }

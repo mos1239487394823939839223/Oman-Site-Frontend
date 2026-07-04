@@ -42,14 +42,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   };
 
   const icons: Record<ToastType, React.ReactNode> = {
-    success: <FaCheckCircle className="text-emerald-400 text-lg flex-shrink-0" />,
+    success: <FaCheckCircle className="text-amber-400 text-lg flex-shrink-0" />,
     error: <FaTimesCircle className="text-red-400 text-lg flex-shrink-0" />,
     info: <FaInfoCircle className="text-blue-400 text-lg flex-shrink-0" />,
     warning: <FaExclamationTriangle className="text-amber-400 text-lg flex-shrink-0" />,
   };
 
   const borders: Record<ToastType, string> = {
-    success: "border-l-4 border-emerald-500",
+    success: "border-l-4 border-amber-500",
     error: "border-l-4 border-red-500",
     info: "border-l-4 border-blue-500",
     warning: "border-l-4 border-amber-500",

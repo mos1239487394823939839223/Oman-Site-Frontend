@@ -119,7 +119,7 @@ function PaymentPageContent() {
             <p className="text-gray-500 font-medium mt-1">اختر وسيلة الدفع المناسبة لك</p>
           </div>
           <div className="flex items-center gap-4 bg-white/60 backdrop-blur-md p-4 rounded-3xl border border-white/50 shadow-sm">
-            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
               <FaLock />
             </div>
             <div>
@@ -234,7 +234,7 @@ function PaymentPageContent() {
                       <p className="text-xs text-gray-500">الكمية: {item.count}</p>
                     </div>
                     <div className="font-black text-[#5a1832] text-sm whitespace-nowrap">
-                      {item.price * item.count} ر.ع
+                      {item.price * item.count}
                     </div>
                   </div>
                 ))}
@@ -243,21 +243,21 @@ function PaymentPageContent() {
               <div className="space-y-3">
                 <div className={styles.summaryRow}>
                   <span className="text-gray-500 font-bold">المجموع الفرعي</span>
-                  <span className="font-black text-gray-900">{cartTotal} ر.ع</span>
+                  <span className="font-black text-gray-900">{cartTotal}</span>
                 </div>
                 <div className={styles.summaryRow}>
                   <span className="text-gray-500 font-bold">رسوم الشحن</span>
-                  <span className="text-green-600 font-black">مجاني</span>
+                  <span className="text-amber-600 font-black">مجاني</span>
                 </div>
                 {hasDiscount && (
                   <div className={styles.summaryRow}>
                     <span className="text-gray-500 font-bold">الخصم</span>
-                    <span className="text-emerald-600 font-black">- {discountValue} ر.ع</span>
+                    <span className="text-amber-600 font-black">- {discountValue}</span>
                   </div>
                 )}
                 <div className={styles.totalBox}>
                   <span className="font-black text-lg">المبلغ الإجمالي</span>
-                  <span className="text-[#D4AF37] font-black text-3xl">{finalTotal} ر.ع</span>
+                  <span className="text-[#D4AF37] font-black text-3xl">{finalTotal}</span>
                 </div>
               </div>
 

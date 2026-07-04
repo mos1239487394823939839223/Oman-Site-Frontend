@@ -1,5 +1,22 @@
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Two lockfiles exist (~/package-lock.json and this project's). Pin the trace
+  // root to this project so Next optimizes/traces from the correct workspace.
+  outputFileTracingRoot: __dirname,
+
+  // Rewrite barrel imports to per-symbol deep imports at build time so only the
+  // icons/components actually used ship to the client. react-icons is imported
+  // across 44 files and full @mui/material loads on every page — this is the
+  // single biggest First-Load-JS reduction available without refactoring.
+  experimental: {
+    optimizePackageImports: ["react-icons", "@mui/material", "@mui/icons-material"],
+  },
+
   async rewrites() {
     return {
       beforeFiles: [

@@ -13,34 +13,34 @@ interface StatsCardProps {
 
 const colorMap = {
   gold: {
-    bg: "from-[#c5a059]/20 to-[#c5a059]/5",
-    icon: "bg-[#c5a059]/20 text-[#c5a059]",
-    trend: "text-[#c5a059]",
-    border: "border-[#c5a059]/20",
+    border: "border-[#5C2E3A]/20",
+    icon: "bg-[#5C2E3A]/10 text-[#5C2E3A]",
+    trend: "text-[#5C2E3A]",
+    accent: "bg-[#5C2E3A]",
   },
   green: {
-    bg: "from-emerald-500/20 to-emerald-500/5",
-    icon: "bg-emerald-500/20 text-emerald-400",
-    trend: "text-emerald-400",
-    border: "border-emerald-500/20",
+    border: "border-amber-100",
+    icon: "bg-amber-50 text-amber-600",
+    trend: "text-amber-600",
+    accent: "bg-amber-500",
   },
   blue: {
-    bg: "from-blue-500/20 to-blue-500/5",
-    icon: "bg-blue-500/20 text-blue-400",
-    trend: "text-blue-400",
-    border: "border-blue-500/20",
+    border: "border-blue-100",
+    icon: "bg-blue-50 text-blue-600",
+    trend: "text-blue-600",
+    accent: "bg-blue-500",
   },
   purple: {
-    bg: "from-purple-500/20 to-purple-500/5",
-    icon: "bg-purple-500/20 text-purple-400",
-    trend: "text-purple-400",
-    border: "border-purple-500/20",
+    border: "border-purple-100",
+    icon: "bg-purple-50 text-purple-600",
+    trend: "text-purple-600",
+    accent: "bg-purple-500",
   },
   red: {
-    bg: "from-red-500/20 to-red-500/5",
-    icon: "bg-red-500/20 text-red-400",
-    trend: "text-red-400",
-    border: "border-red-500/20",
+    border: "border-red-100",
+    icon: "bg-red-50 text-red-600",
+    trend: "text-red-600",
+    accent: "bg-red-500",
   },
 };
 
@@ -48,12 +48,12 @@ export default function StatsCard({ title, value, icon, trend, subtitle, color =
   const c = colorMap[color];
 
   return (
-    <div className={`relative overflow-hidden bg-gradient-to-br ${c.bg} border ${c.border} rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`}>
+    <div className={`relative overflow-hidden bg-white border ${c.border} rounded-2xl p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">{title}</p>
-          <p className="text-white text-3xl font-black tracking-tight">{value}</p>
-          {subtitle && <p className="text-gray-500 text-xs mt-1">{subtitle}</p>}
+          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">{title}</p>
+          <p className="text-gray-900 text-3xl font-black tracking-tight">{value}</p>
+          {subtitle && <p className="text-gray-400 text-xs mt-1">{subtitle}</p>}
           {trend && (
             <div className={`flex items-center gap-1 mt-2 text-xs font-bold ${c.trend}`}>
               <span>{trend.isPositive ? "▲" : "▼"}</span>

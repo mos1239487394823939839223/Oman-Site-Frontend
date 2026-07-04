@@ -5,20 +5,70 @@ import { useAuth } from "@/components/AuthProvider";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { addToCart, createMockVisaOrder, getCart } from "@/services/clientApi";
-import { FaLock, FaShieldAlt, FaArrowLeft, FaCreditCard, FaUser, FaCalendarAlt, FaKey } from "react-icons/fa";
+import { FaLock, FaShieldAlt, FaArrowLeft, FaCreditCard, FaUser, FaCalendarAlt, FaKey, FaTag, FaCheckCircle, FaTimes, FaTimesCircle } from "react-icons/fa";
 import Image from "next/image";
 import styles from "./VisaPaymentPage.module.css";
 
 function VisaPaymentPageContent() {
-  const { cartItems, cartTotal, clearCart } = useCart();
+  const { cartItems, cartTotal, cartTotalAfterDiscount, appliedCoupon, applyCoupon, removeCoupon, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
+
+  const [couponInput, setCouponInput] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState<number | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  const hasDiscount = typeof cartTotalAfterDiscount === "number" && cartTotalAfterDiscount < cartTotal;
+  const finalTotal = hasDiscount ? (cartTotalAfterDiscount as number) : cartTotal;
+  const discountValue = hasDiscount ? (cartTotal - (cartTotalAfterDiscount as number)) : 0;
+
+  const handleApplyCoupon = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const code = couponInput.trim().toUpperCase();
+    if (!code) {
+      setCouponError("يرجى إدخال كود الخصم أولاً");
+      return;
+    }
+    if (code === appliedCoupon) {
+      setCouponError("هذا الكوبون مُطبَّق بالفعل");
+      return;
+    }
+
+    setApplyingCoupon(true);
+    setCouponError("");
+    setCouponDiscount(null);
+
+    try {
+      const { discount } = await applyCoupon(code);
+      setCouponDiscount(discount);
+      setCouponInput("");
+    } catch (err: any) {
+      const msg: string = err?.message || "";
+      if (/expired/i.test(msg) || /انتهت/i.test(msg)) {
+        setCouponError("هذا الكوبون منتهي الصلاحية");
+      } else if (/not found|invalid/i.test(msg)) {
+        setCouponError("كود الخصم غير صحيح أو غير موجود");
+      } else {
+        setCouponError(msg || "تعذر تطبيق الكوبون، يرجى المحاولة مجدداً");
+      }
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    removeCoupon();
+    setCouponDiscount(null);
+    setCouponError("");
+    setCouponInput("");
+  };
   
   const [shippingAddress, setShippingAddress] = useState({
     details: "",
@@ -147,7 +197,7 @@ function VisaPaymentPageContent() {
     return (
       <div className={styles.paymentContainer + " flex items-center justify-center"}>
         <div className={styles.glassCard + " p-12 text-center max-w-md w-full"}>
-          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <FaShieldAlt size={40} />
           </div>
           <h2 className="text-3xl font-black text-gray-900 mb-2 text-[#5a1832]">تم الدفع بنجاح!</h2>
@@ -167,7 +217,7 @@ function VisaPaymentPageContent() {
             <FaArrowLeft /> العودة للحقيبة
           </button>
           <div className="flex items-center gap-2 bg-white/50 backdrop-blur-md px-4 py-2 rounded-full border border-white/50 shadow-sm">
-            <FaLock className="text-green-600 text-xs" />
+            <FaLock className="text-amber-600 text-xs" />
             <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">دفع آمن ومشفّر 256-bit</span>
           </div>
         </div>
@@ -278,7 +328,7 @@ function VisaPaymentPageContent() {
                   {loading ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                   ) : (
-                    <>أتمم الدفع بقيمة {cartTotal} ر.ع</>
+                    <>أتمم الدفع بقيمة {finalTotal}</>
                   )}
                 </button>
 
@@ -307,24 +357,96 @@ function VisaPaymentPageContent() {
                       <p className="text-xs text-gray-500">الكمية: {item.count}</p>
                     </div>
                     <div className="font-black text-[#5a1832] text-sm">
-                      {item.price * item.count} ر.ع
+                      {item.price * item.count}
                     </div>
                   </div>
                 ))}
               </div>
 
+              {/* Coupon Section */}
+              {appliedCoupon ? (
+                <div className="mt-4">
+                  <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                    <FaCheckCircle className="text-amber-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-amber-700 uppercase tracking-widest">كوبون مفعّل</p>
+                      <p className="font-black text-amber-800 text-sm mt-0.5">
+                        {appliedCoupon}
+                        {couponDiscount !== null && (
+                          <span className="mr-2 text-[11px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                            خصم {couponDiscount}%
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="p-1.5 rounded-lg text-amber-500 hover:bg-amber-100 transition-colors"
+                      aria-label="إزالة الكوبون"
+                    >
+                      <FaTimes size={12} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleApplyCoupon} className="mt-4">
+                  <div className={`flex items-center gap-2 border rounded-2xl p-1.5 transition-colors ${couponError ? "border-red-300 bg-red-50/40" : "border-gray-200 bg-gray-50/70"}`}>
+                    <div className="pl-2 flex-shrink-0">
+                      <FaTag className={`text-sm ${couponError ? "text-red-400" : "text-gray-400"}`} />
+                    </div>
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => {
+                        setCouponInput(e.target.value.toUpperCase());
+                        if (couponError) setCouponError("");
+                      }}
+                      placeholder="أدخل كود الخصم"
+                      maxLength={30}
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="flex-1 bg-transparent outline-none font-bold text-sm text-gray-700 placeholder:text-gray-400 placeholder:font-medium tracking-widest uppercase"
+                      aria-label="كود الخصم"
+                    />
+                    <button
+                      type="submit"
+                      disabled={applyingCoupon || !couponInput.trim()}
+                      className="px-4 py-2 rounded-xl bg-[#5a1832] text-white text-xs font-black hover:bg-[#4a1429] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 min-w-[72px] justify-center"
+                    >
+                      {applyingCoupon ? (
+                        <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      ) : "تطبيق"}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <FaTimesCircle className="text-red-500 text-xs flex-shrink-0" />
+                      <p className="text-xs font-bold text-red-600">{couponError}</p>
+                    </div>
+                  )}
+                </form>
+              )}
+
               <div className={styles.totalSection}>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-500 font-bold">المجموع الفرعي</span>
-                  <span className="font-black text-gray-900">{cartTotal} ر.ع</span>
+                  <span className="font-black text-gray-900">{cartTotal}</span>
                 </div>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-500 font-bold">الشحن</span>
-                  <span className="text-green-600 font-black">مجاني</span>
+                  <span className="text-amber-600 font-black">مجاني</span>
                 </div>
-                <div className="flex justify-between items-center bg-[#5a1832] p-4 rounded-2xl">
+                {hasDiscount && (
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-500 font-bold">الخصم</span>
+                    <span className="font-black text-amber-600">- {discountValue}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center bg-[#5a1832] p-4 rounded-2xl mt-2">
                   <span className="text-white font-black text-lg">الإجمالي الكلي</span>
-                  <span className="text-[#D4AF37] font-black text-2xl">{cartTotal} ر.ع</span>
+                  <span className="text-[#D4AF37] font-black text-2xl">{finalTotal}</span>
                 </div>
               </div>
             </div>

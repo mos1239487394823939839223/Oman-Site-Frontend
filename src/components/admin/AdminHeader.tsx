@@ -1,7 +1,25 @@
 "use client";
 
-import { FaBars, FaBell, FaSearch, FaSignOutAlt, FaUser } from "react-icons/fa";
+import {
+  AppBar,
+  Toolbar,
+  Box,
+  InputBase,
+  IconButton,
+  Badge,
+  Avatar,
+  Button,
+  Typography,
+  Divider,
+  alpha,
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import LogoutIcon from "@mui/icons-material/Logout";
+import PersonIcon from "@mui/icons-material/Person";
 import { useAuth } from "@/components/AuthProvider";
+import { useNotifications } from "@/components/admin/NotificationsProvider";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
@@ -9,68 +27,157 @@ interface AdminHeaderProps {
   onMenuToggle: () => void;
 }
 
+const MAROON = "#5C2E3A";
+const MAROON_DARK = "#4A2330";
+
 export default function AdminHeader({ onMenuToggle }: AdminHeaderProps) {
   const { user, logout } = useAuth();
+  const { unreadCount, markAllRead } = useNotifications();
   const { t } = useTranslation();
 
   return (
-    <header className="sticky top-0 z-30 bg-[#0f1623]/95 backdrop-blur-xl border-b border-white/5 px-4 lg:px-6 py-3.5">
-      <div className="flex items-center justify-between gap-4">
-        {/* Left */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onMenuToggle}
-            className="lg:hidden w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
-          >
-            <FaBars className="w-4 h-4" />
-          </button>
+    <AppBar
+      position="sticky"
+      elevation={0}
+      sx={{
+        bgcolor: MAROON,
+        color: "#fff",
+        borderBottom: `1px solid ${MAROON_DARK}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+        zIndex: (theme) => theme.zIndex.appBar,
+      }}
+    >
+      <Toolbar
+        disableGutters
+        sx={{
+          minHeight: { xs: 72, md: 82 },
+          px: { xs: 2, lg: 3 },
+          gap: { xs: 1, md: 2 },
+        }}
+      >
+        {/* Mobile menu toggle */}
+        <IconButton
+          onClick={onMenuToggle}
+          edge="start"
+          aria-label="Toggle menu"
+          sx={{
+            display: { xs: "inline-flex", lg: "none" },
+            color: alpha("#fff", 0.85),
+            "&:hover": { bgcolor: alpha("#fff", 0.1) },
+          }}
+        >
+          <MenuIcon />
+        </IconButton>
 
-          {/* Search */}
-          <div className="hidden md:flex items-center gap-2 bg-white/5 border border-white/5 rounded-xl px-3 py-2 w-72 focus-within:border-[#c5a059]/40 transition-colors">
-            <FaSearch className="text-gray-500 text-sm flex-shrink-0" />
-            <input
-              type="text"
-              placeholder={t('common.search')}
-              className="bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:outline-none w-full"
-            />
-          </div>
-        </div>
+        {/* Search — grows to fill available space, capped for readability */}
+        <Box
+          sx={{
+            display: { xs: "none", md: "flex" },
+            alignItems: "center",
+            gap: 1.25,
+            flexGrow: 1,
+            maxWidth: 520,
+            bgcolor: alpha("#fff", 0.12),
+            border: `1px solid ${alpha("#fff", 0.2)}`,
+            borderRadius: 2,
+            px: 2,
+            height: 42,
+            transition: "all .2s",
+            "&:hover": { bgcolor: alpha("#fff", 0.16) },
+            "&:focus-within": {
+              bgcolor: alpha("#fff", 0.18),
+              borderColor: alpha("#fff", 0.45),
+            },
+          }}
+        >
+          <SearchIcon sx={{ color: alpha("#fff", 0.7), fontSize: 20 }} />
+          <InputBase
+            placeholder={String(t("common.search") || "Search")}
+            sx={{
+              flexGrow: 1,
+              width: "100%",
+              color: "#fff",
+              fontSize: 14,
+              "& input::placeholder": { color: alpha("#fff", 0.6), opacity: 1 },
+            }}
+          />
+        </Box>
 
-        {/* Right */}
-        <div className="flex items-center gap-2">
-          <div className="hidden lg:block">
+        {/* Spacer keeps the actions pinned to the end (also on mobile) */}
+        <Box sx={{ flexGrow: 1 }} />
+
+        {/* Right-side actions */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 0.5, md: 1 } }}>
+          <Box sx={{ display: { xs: "none", lg: "block" } }}>
             <LanguageSwitcher />
-          </div>
-          {/* Notifications */}
-          <button className="relative w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
-            <FaBell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#c5a059] rounded-full" />
-          </button>
+          </Box>
 
-          {/* Divider */}
-          <div className="w-px h-6 bg-white/10 mx-1" />
+          <IconButton
+            aria-label="Notifications"
+            onClick={markAllRead}
+            sx={{ color: alpha("#fff", 0.85), "&:hover": { bgcolor: alpha("#fff", 0.1) } }}
+          >
+            <Badge
+              badgeContent={unreadCount}
+              color="secondary"
+              max={99}
+              invisible={unreadCount === 0}
+            >
+              <NotificationsNoneIcon />
+            </Badge>
+          </IconButton>
+
+          <Divider
+            orientation="vertical"
+            flexItem
+            sx={{ my: 1.25, mx: 0.5, borderColor: alpha("#fff", 0.2) }}
+          />
 
           {/* User */}
-          <div className="flex items-center gap-2.5 pl-1">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#c5a059] to-[#e6c35f] rounded-xl flex items-center justify-center shadow-lg">
-              <FaUser className="text-[#0f1623] text-xs" />
-            </div>
-            <div className="hidden sm:block">
-              <p className="text-white text-xs font-bold leading-none">{user?.name || "Admin"}</p>
-              <p className="text-gray-500 text-[10px] mt-0.5">{t('header.adminDashboard')}</p>
-            </div>
-          </div>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, pl: 0.5 }}>
+            <Avatar
+              sx={{
+                width: 34,
+                height: 34,
+                bgcolor: alpha("#fff", 0.15),
+                color: "#fff",
+              }}
+            >
+              <PersonIcon sx={{ fontSize: 18 }} />
+            </Avatar>
+            <Box sx={{ display: { xs: "none", sm: "block" }, lineHeight: 1 }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.1 }}>
+                {user?.name || "Admin"}
+              </Typography>
+              <Typography sx={{ fontSize: 11, color: alpha("#fff", 0.6), mt: 0.25 }}>
+                {t("header.adminDashboard")}
+              </Typography>
+            </Box>
+          </Box>
 
           {/* Logout */}
-          <button
+          <Button
             onClick={logout}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all ml-1"
+            startIcon={<LogoutIcon sx={{ fontSize: 18 }} />}
+            sx={{
+              ml: 0.5,
+              color: alpha("#fff", 0.9),
+              textTransform: "none",
+              fontWeight: 700,
+              fontSize: 13,
+              borderRadius: 2,
+              px: 1.5,
+              minWidth: 0,
+              "& .MuiButton-startIcon": { mr: { xs: 0, sm: 0.75 }, ml: 0 },
+              "&:hover": { bgcolor: alpha("#fff", 0.1), color: "#fff" },
+            }}
           >
-            <FaSignOutAlt className="w-3.5 h-3.5" />
-            <span className="hidden sm:block">{t('header.logout')}</span>
-          </button>
-        </div>
-      </div>
-    </header>
+            <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+              {t("header.logout")}
+            </Box>
+          </Button>
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 }

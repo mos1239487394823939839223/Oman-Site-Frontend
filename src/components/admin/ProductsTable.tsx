@@ -69,7 +69,7 @@ export default function ProductsTable({
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
             row.quantity > 10
-              ? "bg-primary/10 text-green-800"
+              ? "bg-primary/10 text-amber-800"
               : row.quantity > 0
               ? "bg-yellow-100 text-yellow-800"
               : "bg-red-100 text-red-800"

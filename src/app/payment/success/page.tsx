@@ -69,7 +69,7 @@ function PaymentSuccessPageContent() {
               <a href="mailto:support@alnaseej.com" className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-[#5a1832] hover:text-white transition-all">
                 <FaEnvelope size={20} />
               </a>
-              <a href="https://wa.me/00968" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-green-500 hover:text-white transition-all">
+              <a href="https://wa.me/00968" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-amber-500 hover:text-white transition-all">
                 <FaWhatsapp size={22} />
               </a>
             </div>
