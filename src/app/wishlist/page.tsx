@@ -1,10 +1,10 @@
 "use client";
 
-import { useWishlist } from "@/components/WishlistProvider.tsx";
+import { useWishlist } from "@/components/WishlistProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import ProductCard from "@/components/ProductCard.tsx";
+import ProductCard from "@/components/ProductCard";
 import { FaHeart } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/components/LanguageProvider";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useWishlist } from "@/components/WishlistProvider.tsx";
+import { useWishlist } from "@/components/WishlistProvider";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 

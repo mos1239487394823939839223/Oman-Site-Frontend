@@ -96,7 +96,7 @@ export default function LoginForm() {
             <div className="space-y-2">
               <div className="flex justify-between items-center mr-2">
                 <label htmlFor="password" className="block text-sm font-black text-gray-700">{t('auth.password')}</label>
-                <Link href="/forgot-password" weights="bold" className="text-xs font-black text-[#5a1832] hover:text-[#D4AF37]">{t('auth.forgotPassword')}</Link>
+                <Link href="/forgot-password" className="text-xs font-black text-[#5a1832] hover:text-[#D4AF37]">{t('auth.forgotPassword')}</Link>
               </div>
               <div className="relative">
                 <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
