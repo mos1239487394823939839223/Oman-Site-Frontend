@@ -6,7 +6,7 @@ import {
   FaTachometerAlt, FaBox, FaShoppingBag, FaUsers, FaTags,
   FaStar, FaTimes, FaLayerGroup, FaImages, FaGlobe,
   FaConciergeBell, FaBars, FaStore,
-  FaLanguage, FaChevronDown, FaChevronRight, FaGift, FaTicketAlt
+  FaLanguage, FaChevronDown, FaChevronRight, FaGift, FaTicketAlt, FaCrown
 } from "react-icons/fa";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,6 +38,7 @@ const menuGroups: Array<{
       { nameKey: "admin.sidebar.products", href: "/admin/products", icon: FaBox },
       { nameKey: "admin.sidebar.bestSellers", href: "/admin/recommended", icon: FaStar },
       { nameKey: "admin.sidebar.categories", href: "/admin/categories", icon: FaTags },
+      { nameKey: "admin.sidebar.brands", href: "/admin/brands", icon: FaCrown },
       { nameKey: "admin.sidebar.subcategories", href: "/admin/subcategories", icon: FaLayerGroup },
       { nameKey: "admin.sidebar.gifts", href: "/admin/gifts", icon: FaGift },
     ]
