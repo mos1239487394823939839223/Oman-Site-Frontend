@@ -219,25 +219,28 @@ function PaymentPageContent() {
               <h2 className="text-xl font-black text-[#5a1832] mb-8 border-b pb-4">ملخص طلبك</h2>
               
               <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar mb-8">
-                {cartItems.map((item) => (
-                  <div key={item.product._id} className="flex gap-4 items-center bg-gray-50/30 p-3 rounded-2xl border border-gray-100 hover:bg-white transition-colors group">
+                {cartItems.map((item) => {
+                  const product = item.product || item.gift;
+                  return (
+                  <div key={item._id} className="flex gap-4 items-center bg-gray-50/30 p-3 rounded-2xl border border-gray-100 hover:bg-white transition-colors group">
                     <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-white shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform">
                       <Image
-                        src={item.product.imageCover || '/placeholder.svg'}
-                        alt={item.product.title}
+                        src={product?.imageCover || '/placeholder.svg'}
+                        alt={product?.title || ''}
                         fill
                         className="object-contain p-2"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-gray-900 text-sm truncate">{item.product.title}</h4>
+                      <h4 className="font-black text-gray-900 text-sm truncate">{product?.title}</h4>
                       <p className="text-xs text-gray-500">الكمية: {item.count}</p>
                     </div>
                     <div className="font-black text-[#5a1832] text-sm whitespace-nowrap">
                       {item.price * item.count}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="space-y-3">
