@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { adminApi } from "@/services/adminApi";
 import ConfirmModal from "@/components/admin/ConfirmModal";
+import { getFriendlyError } from "@/lib/errors";
 import { FaPlus, FaTimes, FaEdit, FaTrashAlt, FaTicketAlt, FaPercent } from "react-icons/fa";
 
 type Ref = string | { _id: string; name?: string; title?: string };
@@ -156,7 +157,7 @@ export default function CouponsManagementPage() {
       closeForm();
       fetchData();
     } catch (e: any) {
-      setError(e?.message || "Failed to save coupon.");
+      setError(getFriendlyError(e, "Couldn't save this coupon. Please try again."));
     } finally {
       setFormLoading(false);
     }
@@ -170,7 +171,7 @@ export default function CouponsManagementPage() {
       setCoupons(prev => prev.filter(c => c._id !== deleteTarget._id));
       setDeleteTarget(null);
     } catch (e: any) {
-      alert(e?.message || "Failed to delete coupon.");
+      alert(getFriendlyError(e, "Couldn't delete this coupon. Please try again."));
     } finally {
       setDeleting(false);
     }

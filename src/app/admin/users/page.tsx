@@ -6,6 +6,8 @@ import ConfirmModal from "@/components/admin/ConfirmModal";
 import UserForm from "@/components/admin/UserForm";
 import { adminApi } from "@/services/adminApi";
 import { User } from "@/services/clientApi";
+import { useToast } from "@/components/admin/ToastProvider";
+import { getFriendlyError } from "@/lib/errors";
 import { FaPlus, FaTimes } from "react-icons/fa";
 
 export default function UsersManagementPage() {
@@ -15,6 +17,7 @@ export default function UsersManagementPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     fetchData();
@@ -71,9 +74,9 @@ export default function UsersManagementPage() {
       setShowForm(false);
       setEditingUser(null);
       fetchData();
+      toast.success("Saved", editingUser ? "User updated successfully" : "New user created");
     } catch (error: any) {
-      console.error("Error saving user:", error);
-      alert(error.message || "Failed to save user");
+      toast.error("Save failed", getFriendlyError(error, "Couldn't save this user. Please try again."));
     } finally {
       setFormLoading(false);
     }
@@ -93,8 +96,7 @@ export default function UsersManagementPage() {
       await adminApi.toggleUserActive(user._id);
       fetchData();
     } catch (error: any) {
-      console.error("Error toggling user active status:", error);
-      alert(error.message || "Failed to update user status");
+      toast.error("Update failed", getFriendlyError(error, "Couldn't update the user's status. Please try again."));
     }
   };
 
@@ -105,9 +107,9 @@ export default function UsersManagementPage() {
       await adminApi.deleteUser(deleteUser._id);
       setUsers(users.filter((u) => u._id !== deleteUser._id));
       setDeleteUser(null);
+      toast.success("Deleted", `"${deleteUser.name}" was removed`);
     } catch (error) {
-      console.error("Error deleting user:", error);
-      alert("Failed to delete user");
+      toast.error("Delete failed", getFriendlyError(error, "Couldn't delete this user. Please try again."));
     }
   };
 

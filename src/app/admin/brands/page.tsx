@@ -6,6 +6,8 @@ import BrandForm from "@/components/admin/BrandForm";
 import ConfirmModal from "@/components/admin/ConfirmModal";
 import { adminApi } from "@/services/adminApi";
 import { Brand } from "@/services/clientApi";
+import { useToast } from "@/components/admin/ToastProvider";
+import { getFriendlyError } from "@/lib/errors";
 import { FaPlus, FaTimes } from "react-icons/fa";
 
 export default function BrandsManagementPage() {
@@ -15,6 +17,7 @@ export default function BrandsManagementPage() {
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [deleteBrand, setDeleteBrand] = useState<Brand | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const toast = useToast();
 
   useEffect(() => { fetchData(); }, []);
 
@@ -40,9 +43,9 @@ export default function BrandsManagementPage() {
       await adminApi.deleteBrand(deleteBrand._id);
       setBrands(brands.filter(b => b._id !== deleteBrand._id));
       setDeleteBrand(null);
+      toast.success("Deleted", `"${deleteBrand.name}" was removed`);
     } catch (error) {
-      console.error("Error deleting brand:", error);
-      alert("Failed to delete brand");
+      toast.error("Delete failed", getFriendlyError(error, "Couldn't delete this brand. Please try again."));
     }
   };
 
@@ -51,15 +54,16 @@ export default function BrandsManagementPage() {
       setFormLoading(true);
       if (editingBrand) {
         await adminApi.updateBrand(editingBrand._id, data);
+        toast.success("Updated", "Brand updated successfully");
       } else {
         await adminApi.createBrand(data);
+        toast.success("Created", "New brand added");
       }
       setShowForm(false);
       setEditingBrand(null);
       fetchData();
     } catch (error: any) {
-      console.error("Error saving brand:", error);
-      alert(error.message || "Failed to save brand");
+      toast.error("Save failed", getFriendlyError(error, "Couldn't save this brand. Please try again."));
     } finally {
       setFormLoading(false);
     }

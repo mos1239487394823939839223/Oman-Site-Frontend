@@ -6,6 +6,8 @@ import SubcategoryForm from "@/components/admin/SubcategoryForm";
 import ConfirmModal from "@/components/admin/ConfirmModal";
 import { adminApi } from "@/services/adminApi";
 import { getCategories, Category, Subcategory } from "@/services/clientApi";
+import { useToast } from "@/components/admin/ToastProvider";
+import { getFriendlyError } from "@/lib/errors";
 import { FaPlus, FaTimes } from "react-icons/fa";
 
 export default function SubcategoriesManagementPage() {
@@ -16,6 +18,7 @@ export default function SubcategoriesManagementPage() {
   const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
   const [deleteSubcategory, setDeleteSubcategory] = useState<Subcategory | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     fetchData();
@@ -59,9 +62,9 @@ export default function SubcategoriesManagementPage() {
       await adminApi.deleteSubcategory(deleteSubcategory._id);
       setSubcategories(subcategories.filter((s) => s._id !== deleteSubcategory._id));
       setDeleteSubcategory(null);
+      toast.success("Deleted", `"${deleteSubcategory.name}" was removed`);
     } catch (error) {
-      console.error("Error deleting subcategory:", error);
-      alert("Failed to delete subcategory");
+      toast.error("Delete failed", getFriendlyError(error, "Couldn't delete this subcategory. Please try again."));
     }
   };
 
@@ -70,15 +73,16 @@ export default function SubcategoriesManagementPage() {
       setFormLoading(true);
       if (editingSubcategory) {
         await adminApi.updateSubcategory(editingSubcategory._id, data);
+        toast.success("Updated", "Subcategory updated successfully");
       } else {
         await adminApi.createSubcategory(data);
+        toast.success("Created", "New subcategory added");
       }
       setShowForm(false);
       setEditingSubcategory(null);
       fetchData();
     } catch (error: any) {
-      console.error("Error saving subcategory:", error);
-      alert(error.message || "Failed to save subcategory");
+      toast.error("Save failed", getFriendlyError(error, "Couldn't save this subcategory. Please try again."));
     } finally {
       setFormLoading(false);
     }

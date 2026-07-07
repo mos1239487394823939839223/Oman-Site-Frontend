@@ -23,11 +23,17 @@ async function apiRequest(path: string, options: RequestInit = {}): Promise<any>
     ...(options.headers || {}),
   };
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      cache: "no-store",
+    });
+  } catch {
+    // fetch throws (TypeError) when the server is unreachable / offline
+    throw new Error("Can't reach the server. Please check your connection and try again.");
+  }
 
   if (!res.ok) {
     const errorText = await res.text().catch(() => "");
