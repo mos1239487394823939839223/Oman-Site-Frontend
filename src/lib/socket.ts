@@ -1,19 +1,26 @@
 import { io, Socket } from "socket.io-client";
 
 /**
- * Socket.IO connects to the SERVER ORIGIN (e.g. http://localhost:8000),
- * NOT the REST base (which includes the /api/v1 suffix). Socket.IO uses
- * its own /socket.io path and can't go through Next.js rewrites, so we
- * always point at the real backend origin.
+ * Where the Socket.IO client connects. Socket.IO uses its own /socket.io path
+ * and can't go through Next.js rewrites.
  *
  * Resolution order:
- *   1. NEXT_PUBLIC_SOCKET_URL           — explicit override
- *   2. NEXT_PUBLIC_API_URL minus /api/v1 — derive origin from the REST base
- *   3. http://localhost:8000            — dev fallback
+ *   1. NEXT_PUBLIC_SOCKET_URL  — explicit override
+ *   2. Same origin as the page — in the browser we connect to the site's own
+ *      domain and let nginx proxy /socket.io/ to the backend. This keeps the
+ *      socket on the one origin that's guaranteed reachable (the app loaded
+ *      from it) and avoids depending on a separate api subdomain, which may
+ *      not be reachable for WebSocket/polling.
+ *   3. NEXT_PUBLIC_API_URL minus /api/v1 — SSR/no-window fallback
+ *   4. http://localhost:8000  — dev fallback
  */
 function resolveSocketUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_SOCKET_URL;
   if (explicit) return explicit.replace(/\/+$/, "");
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   if (apiUrl) {
@@ -25,8 +32,6 @@ function resolveSocketUrl(): string {
   }
   return "http://localhost:8000";
 }
-
-const SOCKET_URL = resolveSocketUrl();
 
 let socket: Socket | null = null;
 
@@ -52,7 +57,7 @@ export function connectSocket(): Socket {
     socket = null;
   }
 
-  socket = io(SOCKET_URL, {
+  socket = io(resolveSocketUrl(), {
     auth: { token },
     autoConnect: true,
     // Poll first, then upgrade to WebSocket. Polling is plain HTTP(S) over the
