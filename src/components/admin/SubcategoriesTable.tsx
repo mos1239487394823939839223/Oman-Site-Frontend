@@ -1,6 +1,7 @@
 "use client";
 
 import { Subcategory } from "@/services/clientApi";
+import { resolveMediaUrl } from "@/lib/media";
 import DataTable, { Column } from "./DataTable";
 import { FaEdit, FaTrash } from "react-icons/fa";
 
@@ -22,7 +23,7 @@ export default function SubcategoriesTable({
       header: "Image",
       accessor: (row) => (
         <img
-          src={row.image || "/placeholder.svg"}
+          src={resolveMediaUrl(row.image, "subcategories")}
           alt={row.name}
           className="w-12 h-12 object-cover rounded-lg"
           onError={(e) => {

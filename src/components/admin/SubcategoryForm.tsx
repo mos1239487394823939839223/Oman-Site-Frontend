@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Subcategory, Category } from "@/services/clientApi";
+import { resolveMediaUrl } from "@/lib/media";
 import LoadingSpinner from "./LoadingSpinner";
 
 interface SubcategoryFormProps {
@@ -12,7 +13,7 @@ interface SubcategoryFormProps {
   loading?: boolean;
   allSubcategories?: Subcategory[];
 }
-interface FormData {
+interface SubcategoryFormState {
   name: string;
   category: string;
 }
@@ -25,10 +26,12 @@ export default function SubcategoryForm({
   onCancel,
   loading = false,
 }: SubcategoryFormProps) {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<SubcategoryFormState>({
     name: "",
     category: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [currentImage, setCurrentImage] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -40,6 +43,7 @@ export default function SubcategoryForm({
           ? subcategory.category
           : (subcategory.category as any)?._id || "",
       });
+      setCurrentImage(subcategory.image || "");
     }
   }, [subcategory]);
 
@@ -82,11 +86,12 @@ export default function SubcategoryForm({
       ? subcategory.category
       : (subcategory?.category as any)?._id || "";
 
-    const data: Record<string, string> = {};
-    if (!isEdit || formData.name.trim() !== origName) data.name = formData.name.trim();
-    if (!isEdit || formData.category !== origCategory) data.category = formData.category;
+    const payload = new FormData();
+    if (!isEdit || formData.name.trim() !== origName) payload.append("name", formData.name.trim());
+    if (!isEdit || formData.category !== origCategory) payload.append("category", formData.category);
+    if (imageFile) payload.append("image", imageFile);
 
-    await onSubmit(data as any);
+    await onSubmit(payload);
   };
 
   return (
@@ -134,6 +139,34 @@ export default function SubcategoryForm({
         )}
       </div>
 
+      {/* Image */}
+      <div>
+        <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+          Subcategory Image
+        </label>
+        <input
+          type="file"
+          id="image"
+          name="image"
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
+        />
+        <p className="mt-1 text-xs text-gray-400">
+          {subcategory ? "Leave empty to keep the current image." : "Optional — shown on the storefront subcategory filter."}
+        </p>
+        {currentImage && (
+          <img
+            src={resolveMediaUrl(currentImage, "subcategories")}
+            alt="Subcategory preview"
+            className="mt-2 w-32 h-32 object-cover rounded-lg border border-gray-300"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        )}
+      </div>
+
       {/* Form Actions */}
       <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
         <button
@@ -156,5 +189,3 @@ export default function SubcategoryForm({
     </form>
   );
 }
-
-

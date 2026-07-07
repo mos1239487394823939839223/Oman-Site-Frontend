@@ -2,7 +2,7 @@ const BACKEND_ORIGIN = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
 ).replace(/\/api\/v1.*$/, "");
 
-type MediaFolder = "gifts" | "products" | "categories" | "banners" | "brands";
+type MediaFolder = "gifts" | "products" | "categories" | "subcategories" | "banners" | "brands";
 
 function toProxiedUploadPath(pathname: string): string {
   const normalized = pathname.replace(/^\/+/, "");

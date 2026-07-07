@@ -6,6 +6,7 @@ import { getProducts, getCategories, getSubCategories, Product, Category, Subcat
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import CategoriesBar from "@/components/CategoriesBar";
+import { resolveMediaUrl } from "@/lib/media";
 import { FaSort, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import ProductCard from "@/components/ProductCard";
@@ -196,7 +197,7 @@ function SelectedCategoryView({
                   : 'border-white/10 bg-white/5 group-hover:border-[#D4AF37]/50'
                   }`}>
                   <img
-                    src={sub.image || "/placeholder.svg"}
+                    src={resolveMediaUrl(sub.image, "subcategories")}
                     alt={sub.name}
                     className="w-full h-full object-cover"
                   />

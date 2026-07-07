@@ -143,20 +143,20 @@ export const adminApi = {
   getSubcategory: (id: string) => apiRequest(`/subcategories/${id}`),
   getSubcategoriesByCategory: (categoryId: string) =>
     apiRequest(`/categories/${categoryId}/subcategories`),
-  createSubcategory: (data: Record<string, any>) =>
+  createSubcategory: (data: FormData | Record<string, any>) =>
     apiRequest("/subcategories", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: data instanceof FormData ? data : JSON.stringify(data),
     }),
-  createSubcategoryUnderCategory: (categoryId: string, data: Record<string, any>) =>
+  createSubcategoryUnderCategory: (categoryId: string, data: FormData | Record<string, any>) =>
     apiRequest(`/categories/${categoryId}/subcategories`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: data instanceof FormData ? data : JSON.stringify(data),
     }),
-  updateSubcategory: (id: string, data: Record<string, any>) =>
+  updateSubcategory: (id: string, data: FormData | Record<string, any>) =>
     apiRequest(`/subcategories/${id}`, {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: data instanceof FormData ? data : JSON.stringify(data),
     }),
   deleteSubcategory: (id: string) =>
     apiRequest(`/subcategories/${id}`, { method: "DELETE" }),
