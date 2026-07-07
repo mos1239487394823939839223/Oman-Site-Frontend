@@ -117,19 +117,11 @@ export default function BrandsPage() {
               {/* Brand Logo */}
               <div className="mb-4 flex justify-center">
                 <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-50 transition-colors overflow-hidden">
-                  {brand.image ? (
-                    <img
-                      src={brand.image}
-                      alt={brand.name}
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-300 rounded flex items-center justify-center">
-                      <span className="text-gray-500 text-lg font-bold">
-                        {brand.name.charAt(0)}
-                      </span>
-                    </div>
-                  )}
+                  <div className="w-full h-full bg-primary/10 rounded flex items-center justify-center">
+                    <span className="text-primary text-2xl font-bold">
+                      {brand.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
                 </div>
               </div>
 

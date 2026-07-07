@@ -16,27 +16,33 @@ function toProxiedUploadPath(pathname: string): string {
 export function resolveMediaUrl(url?: string, folder?: MediaFolder): string {
   if (!url) return "/placeholder.svg";
 
-  // Absolute backend or external URL
+  // Absolute backend or external URL. We strip the host and keep the path so the
+  // browser loads it through the Next.js /uploads proxy — this works no matter
+  // what host the API baked in (localhost, an api subdomain, the public domain).
   if (/^https?:\/\//i.test(url)) {
+    // Pull out just the pathname, whether or not the host matches BACKEND_ORIGIN.
+    let pathname: string | null = null;
     if (url.startsWith(BACKEND_ORIGIN)) {
-      const pathname = url.slice(BACKEND_ORIGIN.length);
-      if (pathname.startsWith("/uploads/")) {
-        return pathname;
+      pathname = url.slice(BACKEND_ORIGIN.length);
+    } else {
+      try {
+        pathname = new URL(url).pathname;
+      } catch {
+        pathname = null;
       }
-      if (pathname.startsWith("/banners/")) {
-        return pathname.replace(/^\/banners\//, "/uploads/banners/");
-      }
-      if (pathname.startsWith("/categories/")) {
-        return pathname.replace(/^\/categories\//, "/uploads/categories/");
-      }
-      if (pathname.startsWith("/products/")) {
-        return pathname.replace(/^\/products\//, "/uploads/products/");
-      }
-      if (pathname.startsWith("/gifts/")) {
-        return pathname.replace(/^\/gifts\//, "/uploads/gifts/");
-      }
-      return pathname.startsWith("/") ? pathname : `/${pathname}`;
     }
+
+    if (pathname !== null) {
+      const p = pathname.startsWith("/") ? pathname : `/${pathname}`;
+      if (p.startsWith("/uploads/")) return p;
+      if (p.startsWith("/banners/")) return p.replace(/^\/banners\//, "/uploads/banners/");
+      if (p.startsWith("/categories/")) return p.replace(/^\/categories\//, "/uploads/categories/");
+      if (p.startsWith("/products/")) return p.replace(/^\/products\//, "/uploads/products/");
+      if (p.startsWith("/gifts/")) return p.replace(/^\/gifts\//, "/uploads/gifts/");
+      // Host matched but path is something else — keep the stripped path.
+      if (url.startsWith(BACKEND_ORIGIN)) return p;
+    }
+    // Genuinely external image (different host, not an uploads path) — leave it.
     return url;
   }
 

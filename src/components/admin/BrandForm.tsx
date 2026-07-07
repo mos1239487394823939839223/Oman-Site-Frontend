@@ -6,7 +6,7 @@ import LoadingSpinner from "./LoadingSpinner";
 
 interface BrandFormProps {
   brand?: Brand;
-  onSubmit: (data: FormData) => Promise<void>;
+  onSubmit: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
 }
@@ -24,8 +24,6 @@ export default function BrandForm({
   const [formData, setFormData] = useState<BrandFormState>({
     name: "",
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [currentImage, setCurrentImage] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -34,7 +32,6 @@ export default function BrandForm({
       setFormData({
         name: brand.name || "",
       });
-      setCurrentImage(brand.image || "");
     }
   }, [brand]);
 
@@ -57,10 +54,6 @@ export default function BrandForm({
       newErrors.name = "Brand name is required";
     }
 
-    if (!brand && !imageFile) {
-      newErrors.image = "Brand image file is required";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -69,17 +62,7 @@ export default function BrandForm({
     e.preventDefault();
     if (!validate()) return;
 
-    const payload = new FormData();
-    const isEdit = !!brand;
-
-    if (!isEdit || formData.name.trim() !== (brand.name || "")) {
-      payload.append("name", formData.name.trim());
-    }
-    if (imageFile) {
-      payload.append("image", imageFile);
-    }
-
-    await onSubmit(payload);
+    await onSubmit({ name: formData.name.trim() });
   };
 
   return (
@@ -101,34 +84,6 @@ export default function BrandForm({
           placeholder="Enter brand name"
         />
         {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-      </div>
-
-      {/* Image */}
-      <div>
-        <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
-          Brand Image {brand ? "" : "*"}
-        </label>
-        <input
-          type="file"
-          id="image"
-          name="image"
-          accept="image/*"
-          onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
-            errors.image ? "border-red-500" : "border-gray-300"
-          }`}
-        />
-        {errors.image && <p className="mt-1 text-sm text-red-600">{errors.image}</p>}
-        {currentImage && (
-          <img
-            src={currentImage}
-            alt="Brand preview"
-            className="mt-2 w-32 h-32 object-cover rounded-lg border border-gray-300"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-        )}
       </div>
 
       {/* Form Actions */}
@@ -153,5 +108,3 @@ export default function BrandForm({
     </form>
   );
 }
-
-

@@ -10,11 +10,16 @@ import { FaSort, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import ProductCard from "@/components/ProductCard";
 
+type SubcategoryRef =
+  | string
+  | Array<string | { _id: string; name: string; image?: string }>
+  | { _id: string; name: string; image?: string };
+
 interface ExtendedProduct extends Product {
-  subcategory?:
-    | string
-    | Array<string | { _id: string; name: string; image?: string }>
-    | { _id: string; name: string; image?: string };
+  // The API returns `subCategories` (plural array); keep `subcategory` as a
+  // legacy fallback for any older shapes.
+  subCategories?: SubcategoryRef;
+  subcategory?: SubcategoryRef;
   patternType?: string;
   isLocal?: boolean;
 }
@@ -29,9 +34,7 @@ interface SelectedCategoryViewProps {
   onSubCategoryClick: (name: string) => void;
 }
 
-function getSubcategoryId(
-  subcategory: ExtendedProduct["subcategory"]
-): string {
+function getSubcategoryId(subcategory: SubcategoryRef | undefined): string {
   if (!subcategory) return "";
   if (typeof subcategory === "string") return subcategory;
   if (Array.isArray(subcategory)) {
@@ -40,6 +43,12 @@ function getSubcategoryId(
     return typeof firstItem === "string" ? firstItem : firstItem._id || "";
   }
   return subcategory._id || "";
+}
+
+// The product's subcategory arrives as `subCategories` (plural) from the API;
+// fall back to the legacy `subcategory` key just in case.
+function getProductSubId(p: ExtendedProduct): string {
+  return getSubcategoryId(p.subCategories ?? p.subcategory);
 }
 
 function SelectedCategoryView({ 
@@ -66,7 +75,7 @@ function SelectedCategoryView({
   };
 
   const getSubId = (p: ExtendedProduct): string => {
-    return getSubcategoryId(p.subcategory);
+    return getProductSubId(p);
   };
 
   const filteredProducts = selectedSubCategory
@@ -308,18 +317,17 @@ function ProductsPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState("");
   const [displayedProducts, setDisplayedProducts] = useState(20);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<Subcategory[]>([]);
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Initialize selectedCategory from URL
+  // Initialize selectedCategory / selectedBrand from URL
   useEffect(() => {
-    const catId = searchParams.get('category');
-    if (catId) {
-      setSelectedCategory(catId);
-    }
+    setSelectedCategory(searchParams.get('category') || "");
+    setSelectedBrand(searchParams.get('brand') || "");
   }, [searchParams]);
 
   // Fetch initial data
@@ -332,23 +340,23 @@ function ProductsPageContent() {
   // Fetch products when filters change
   useEffect(() => {
     fetchProducts();
-  }, [searchQuery, selectedCategory, selectedSubCategory]);
+  }, [searchQuery, selectedCategory, selectedSubCategory, selectedBrand]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { limit: "1000" };
       if (selectedCategory) params.category = selectedCategory;
+      if (selectedBrand) params.brand = selectedBrand;
       if (searchQuery) params.search = searchQuery;
-      const response = await getProducts(Object.keys(params).length ? params : undefined);
+      const response = await getProducts(params);
       let fetched: ExtendedProduct[] = response.data || [];
 
       // Apply subcategory filter client-side
       if (selectedSubCategory) {
         fetched = fetched.filter((p) => {
-          const pSub = p.subcategory;
-          if (!pSub) return false;
-          const pSubId = getSubcategoryId(pSub);
+          const pSubId = getProductSubId(p);
+          if (!pSubId) return false;
           const subObj = subCategories.find(s => s._id === pSubId);
           return subObj?.name === selectedSubCategory;
         });

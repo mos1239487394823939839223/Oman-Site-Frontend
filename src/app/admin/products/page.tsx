@@ -5,6 +5,7 @@ import ConfirmModal from "@/components/admin/ConfirmModal";
 import { useToast } from "@/components/admin/ToastProvider";
 import { adminApi } from "@/services/adminApi";
 import { getCategories, getBrands } from "@/services/clientApi";
+import { resolveMediaUrl } from "@/lib/media";
 import ProductForm from "@/components/admin/ProductForm";
 import {
   FaPlus, FaTimes, FaBox, FaSearch,
@@ -141,7 +142,7 @@ export default function ProductsManagementPage() {
             {filtered.map((product) => (
               <div key={product._id} className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center px-5 py-4 hover:bg-gray-50 transition-colors">
                 <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                  <img src={product.imageCover || '/placeholder.svg'} alt={product.title} className="w-full h-full object-cover" />
+                  <img src={resolveMediaUrl(product.imageCover, "products")} alt={product.title} className="w-full h-full object-cover" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-gray-900 font-semibold text-sm truncate">{product.title}</p>

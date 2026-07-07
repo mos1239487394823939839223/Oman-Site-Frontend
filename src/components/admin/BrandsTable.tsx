@@ -19,20 +19,6 @@ export default function BrandsTable({
 }: BrandsTableProps) {
   const columns: Column<Brand>[] = [
     {
-      header: "Image",
-      accessor: (row) => (
-        <img
-          src={row.image || "/placeholder.svg"}
-          alt={row.name}
-          className="w-12 h-12 object-cover rounded-lg"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = "/placeholder.svg";
-          }}
-        />
-      ),
-      className: "w-20",
-    },
-    {
       header: "Name",
       accessor: "name",
       sortable: true,

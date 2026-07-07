@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Product, Category, Brand, Subcategory } from "@/services/clientApi";
+import { resolveMediaUrl } from "@/lib/media";
 import LoadingSpinner from "./LoadingSpinner";
 
 interface ProductFormProps {
@@ -463,7 +464,7 @@ export default function ProductForm({
         )}
         {currentImageCover && (
           <img
-            src={currentImageCover}
+            src={resolveMediaUrl(currentImageCover, "products")}
             alt="Cover preview"
             className="mt-2 w-32 h-32 object-cover rounded-lg border border-gray-300"
             onError={(e) => {
@@ -490,7 +491,7 @@ export default function ProductForm({
           {currentImages.map((url, index) => (
             <div key={index} className="relative">
               <img
-                src={url}
+                src={resolveMediaUrl(url, "products")}
                 alt={`Product ${index + 1}`}
                 className="w-20 h-20 object-cover rounded-lg border border-gray-300"
                 onError={(e) => {
