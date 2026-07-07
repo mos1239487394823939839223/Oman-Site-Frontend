@@ -55,7 +55,11 @@ export function connectSocket(): Socket {
   socket = io(SOCKET_URL, {
     auth: { token },
     autoConnect: true,
-    transports: ["websocket", "polling"],
+    // Poll first, then upgrade to WebSocket. Polling is plain HTTP(S) over the
+    // same path the REST API already uses, so it connects even when a proxy
+    // (nginx / Cloudflare) doesn't cleanly forward the WebSocket upgrade — a
+    // websocket-first client tends to hang there instead of falling back.
+    transports: ["polling", "websocket"],
   });
 
   socket.on("connect", () =>

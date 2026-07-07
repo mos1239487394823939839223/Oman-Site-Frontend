@@ -78,7 +78,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
-  const isAdmin = user?.role === "admin";
+  // Backend allows both admins and managers to receive order notifications.
+  const isAdmin = user?.role === "admin" || user?.role === "manager";
 
   useEffect(() => {
     // Only admins/managers may connect; a user token is rejected by the server.
