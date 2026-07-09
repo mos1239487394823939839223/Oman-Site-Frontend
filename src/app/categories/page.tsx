@@ -116,13 +116,14 @@ export default function GiftsPage() {
                 className="group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-[2.5rem] overflow-hidden transition-all duration-500 hover:-translate-y-3 hover:shadow-2xl hover:border-[#D4AF37]/30 hover:bg-white/10 cursor-pointer"
               >
                 {/* Image */}
-                <div className="relative h-72 overflow-hidden bg-white/5">
+                <div className="relative h-72 overflow-hidden bg-white">
                   <Image
                     src={resolveMediaUrl(gift.imageCover, "gifts")}
                     alt={gift.title}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className="object-cover object-top transition-transform duration-700 group-hover:scale-110"
+                    quality={90}
+                    className="object-contain transition-transform duration-700 group-hover:scale-110"
                     loading="lazy"
                     onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
                   />

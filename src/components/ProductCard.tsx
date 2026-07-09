@@ -86,6 +86,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           alt={product.title}
           fill
           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+          quality={90}
           className="object-contain"
           loading="lazy"
           placeholder="blur"
