@@ -72,7 +72,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         },
       }}
     >
-      <Box sx={{ position: "relative", width: "100%", bgcolor: "grey.100", aspectRatio: "4 / 3" }}>
+      <Box sx={{ position: "relative", width: "100%", bgcolor: "common.white", aspectRatio: "4 / 3" }}>
         {imageLoading && (
           <Skeleton
             variant="rectangular"
@@ -86,7 +86,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           alt={product.title}
           fill
           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-          className="object-cover object-top"
+          className="object-contain"
           loading="lazy"
           placeholder="blur"
           blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
