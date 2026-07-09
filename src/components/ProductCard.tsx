@@ -124,9 +124,39 @@ export default function ProductCard({ product }: ProductCardProps) {
       </Box>
 
       <CardContent sx={{ display: "flex", flexDirection: "column", flex: 1, p: 2, gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-          {product.category?.name || t('seo.siteName')}
-        </Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between" }}>
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 800,
+              color: "primary.main",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {product.category?.name || t('seo.siteName')}
+          </Typography>
+          {product.brand?.name && (
+            <Chip
+              label={product.brand.name}
+              size="small"
+              variant="outlined"
+              sx={{
+                flexShrink: 0,
+                height: 20,
+                borderColor: "divider",
+                color: "text.secondary",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                "& .MuiChip-label": { px: 0.9, fontSize: "0.62rem" },
+              }}
+            />
+          )}
+        </Stack>
 
         <Box sx={{ minHeight: 42 }}>
           <Typography
