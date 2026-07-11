@@ -175,7 +175,8 @@ export async function searchProducts(query: string) {
 
 
 export async function getCategories() {
-  const res = await fetch(`${API_BASE}/categories`, { cache: 'no-store' });
+  // High limit so we get every category — the API defaults to 5 per page.
+  const res = await fetch(`${API_BASE}/categories?limit=1000`, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch categories");
   return res.json();
 }
@@ -188,7 +189,8 @@ export async function getCategory(categoryId: string) {
 
 
 export async function getSubCategories() {
-  const res = await fetch(`${API_BASE}/subcategories`);
+  // High limit so we get every subcategory — the API defaults to 5 per page.
+  const res = await fetch(`${API_BASE}/subcategories?limit=1000`);
   if (!res.ok) throw new Error("Failed to fetch subcategories");
   return res.json();
 }
@@ -220,7 +222,8 @@ export async function getSubCategory(subCategoryId: string) {
 
 
 export async function getBrands() {
-  const res = await fetch(`${API_BASE}/brands`);
+  // High limit so we get every brand — the API defaults to 5 per page.
+  const res = await fetch(`${API_BASE}/brands?limit=1000`);
   if (!res.ok) throw new Error("Failed to fetch brands");
   return res.json();
 }
@@ -944,7 +947,7 @@ export async function applyCoupon(coupon: string, token: string) {
 // ─── Subcategories by Category ────────────────────────────────────────────────
 
 export async function getSubcategoriesByCategory(categoryId: string) {
-  const res = await fetch(`${API_BASE}/categories/${categoryId}/subcategories`);
+  const res = await fetch(`${API_BASE}/categories/${categoryId}/subcategories?limit=1000`);
   if (!res.ok) throw new Error("Failed to fetch subcategories for category");
   return res.json();
 }

@@ -114,7 +114,7 @@ export const adminApi = {
     apiRequest(`/gifts/${id}`, { method: "DELETE" }),
 
   // ─── Categories ────────────────────────────────────────────────────────────
-  getAllCategories: () => apiRequest("/categories"),
+  getAllCategories: () => apiRequest("/categories?limit=1000"),
   getCategory: (id: string) => apiRequest(`/categories/${id}`),
   createCategory: (data: FormData | Record<string, any>) =>
     apiRequest("/categories", {
@@ -139,10 +139,10 @@ export const adminApi = {
     apiRequest(`/services/${id}`, { method: "DELETE" }),
 
   // ─── Subcategories ─────────────────────────────────────────────────────────
-  getAllSubcategories: () => apiRequest("/subcategories"),
+  getAllSubcategories: () => apiRequest("/subcategories?limit=1000"),
   getSubcategory: (id: string) => apiRequest(`/subcategories/${id}`),
   getSubcategoriesByCategory: (categoryId: string) =>
-    apiRequest(`/categories/${categoryId}/subcategories`),
+    apiRequest(`/categories/${categoryId}/subcategories?limit=1000`),
   createSubcategory: (data: FormData | Record<string, any>) =>
     apiRequest("/subcategories", {
       method: "POST",
@@ -162,7 +162,7 @@ export const adminApi = {
     apiRequest(`/subcategories/${id}`, { method: "DELETE" }),
 
   // ─── Brands ────────────────────────────────────────────────────────────────
-  getAllBrands: () => apiRequest("/brands"),
+  getAllBrands: () => apiRequest("/brands?limit=1000"),
   getBrand: (id: string) => apiRequest(`/brands/${id}`),
   createBrand: (data: FormData | Record<string, any>) =>
     apiRequest("/brands", {
