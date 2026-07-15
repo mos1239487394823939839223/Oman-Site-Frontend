@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getProducts, getCategories, getSubCategories, Product, Category, Subcategory } from "@/services/clientApi";
+import { getProducts, getCategories, getSubCategories, getBrands, Product, Category, Subcategory, Brand } from "@/services/clientApi";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import CategoriesBar from "@/components/CategoriesBar";
@@ -322,6 +322,7 @@ function ProductsPageContent() {
   const [displayedProducts, setDisplayedProducts] = useState(20);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<Subcategory[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -336,6 +337,7 @@ function ProductsPageContent() {
     fetchProducts();
     fetchCategories();
     fetchSubCategories();
+    fetchBrands();
   }, []);
 
   // Fetch products when filters change
@@ -393,6 +395,37 @@ function ProductsPageContent() {
     }
   };
 
+  const fetchBrands = async () => {
+    try {
+      const response = await getBrands();
+      setBrands(response.data || []);
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      setBrands([]);
+    }
+  };
+
+  // Select/clear the brand filter and keep it in the URL so it stays shareable.
+  const handleBrandSelect = (brandId: string) => {
+    setSelectedBrand(brandId);
+    const params = new URLSearchParams(searchParams.toString());
+    if (brandId) {
+      params.set("brand", brandId);
+    } else {
+      params.delete("brand");
+    }
+    // Preserve the active category: it lives in component state (not the URL)
+    // when picked from CategoriesBar, but updating the URL re-runs the
+    // searchParams effect which reads category back from the URL.
+    if (selectedCategory) {
+      params.set("category", selectedCategory);
+    } else {
+      params.delete("category");
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/products?${qs}` : "/products", { scroll: false });
+  };
+
   const handleLoadMore = () => {
     setDisplayedProducts(prev => prev + 20);
   };
@@ -430,6 +463,42 @@ function ProductsPageContent() {
               </div>
             </div>
           </div>
+
+          {/* Brand Filter Bar */}
+          {brands.length > 0 && (
+            <div className="mt-3 bg-white rounded-2xl py-3 px-4 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3">
+                <span className="flex-shrink-0 text-xs md:text-sm font-black text-[#6f1e3d] uppercase tracking-wider">
+                  العلامات التجارية
+                </span>
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                  <button
+                    onClick={() => handleBrandSelect("")}
+                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs md:text-sm font-black transition-all duration-300 border ${
+                      !selectedBrand
+                        ? "bg-[#6f1e3d] text-white border-[#6f1e3d] shadow-md"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-[#6f1e3d]/40 hover:text-[#6f1e3d]"
+                    }`}
+                  >
+                    الكل
+                  </button>
+                  {brands.map((brand) => (
+                    <button
+                      key={brand._id}
+                      onClick={() => handleBrandSelect(brand._id)}
+                      className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs md:text-sm font-black transition-all duration-300 border ${
+                        selectedBrand === brand._id
+                          ? "bg-[#6f1e3d] text-white border-[#6f1e3d] shadow-md"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-[#6f1e3d]/40 hover:text-[#6f1e3d]"
+                      }`}
+                    >
+                      {brand.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content Area */}
