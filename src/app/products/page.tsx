@@ -31,6 +31,9 @@ interface SelectedCategoryViewProps {
   selectedCategory: string;
   selectedSubCategory?: string;
   categories: Category[];
+  brands: Brand[];
+  selectedBrand: string;
+  onBrandSelect: (id: string) => void;
   onProductClick: (id: string) => void;
   onSubCategoryClick: (name: string) => void;
 }
@@ -52,14 +55,67 @@ function getProductSubId(p: ExtendedProduct): string {
   return getSubcategoryId(p.subCategories ?? p.subcategory);
 }
 
-function SelectedCategoryView({ 
-  products, 
-  subCategories, 
-  selectedCategory, 
-  selectedSubCategory, 
-  categories, 
-  onProductClick, 
-  onSubCategoryClick 
+// Brand filter chips. Rendered under the subcategories when a category is
+// selected, and at the top of the listing otherwise.
+function BrandFilterBar({
+  brands,
+  selectedBrand,
+  onSelect,
+  className = "",
+}: {
+  brands: Brand[];
+  selectedBrand: string;
+  onSelect: (id: string) => void;
+  className?: string;
+}) {
+  if (brands.length === 0) return null;
+  return (
+    <div className={`bg-white rounded-2xl py-3 px-4 shadow-sm border border-gray-100 ${className}`}>
+      <div className="flex items-center gap-3">
+        <span className="flex-shrink-0 text-xs md:text-sm font-black text-[#6f1e3d] uppercase tracking-wider">
+          العلامات التجارية
+        </span>
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            onClick={() => onSelect("")}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs md:text-sm font-black transition-all duration-300 border ${
+              !selectedBrand
+                ? "bg-[#6f1e3d] text-white border-[#6f1e3d] shadow-md"
+                : "bg-white text-gray-600 border-gray-200 hover:border-[#6f1e3d]/40 hover:text-[#6f1e3d]"
+            }`}
+          >
+            الكل
+          </button>
+          {brands.map((brand) => (
+            <button
+              key={brand._id}
+              onClick={() => onSelect(brand._id)}
+              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs md:text-sm font-black transition-all duration-300 border ${
+                selectedBrand === brand._id
+                  ? "bg-[#6f1e3d] text-white border-[#6f1e3d] shadow-md"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-[#6f1e3d]/40 hover:text-[#6f1e3d]"
+              }`}
+            >
+              {brand.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SelectedCategoryView({
+  products,
+  subCategories,
+  selectedCategory,
+  selectedSubCategory,
+  categories,
+  brands,
+  selectedBrand,
+  onBrandSelect,
+  onProductClick,
+  onSubCategoryClick
 }: SelectedCategoryViewProps) {
   const { i18n } = useTranslation();
   const catName = categories.find((c) => c._id === selectedCategory)?.name || 'القسم المختار';
@@ -220,6 +276,14 @@ function SelectedCategoryView({
           )}
         </div>
       </div>
+
+      {/* Brand filter — sits directly under the subcategories */}
+      <BrandFilterBar
+        brands={brands}
+        selectedBrand={selectedBrand}
+        onSelect={onBrandSelect}
+        className="mb-6"
+      />
 
       {filteredProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
@@ -464,40 +528,15 @@ function ProductsPageContent() {
             </div>
           </div>
 
-          {/* Brand Filter Bar */}
-          {brands.length > 0 && (
-            <div className="mt-3 bg-white rounded-2xl py-3 px-4 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3">
-                <span className="flex-shrink-0 text-xs md:text-sm font-black text-[#6f1e3d] uppercase tracking-wider">
-                  العلامات التجارية
-                </span>
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-                  <button
-                    onClick={() => handleBrandSelect("")}
-                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs md:text-sm font-black transition-all duration-300 border ${
-                      !selectedBrand
-                        ? "bg-[#6f1e3d] text-white border-[#6f1e3d] shadow-md"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-[#6f1e3d]/40 hover:text-[#6f1e3d]"
-                    }`}
-                  >
-                    الكل
-                  </button>
-                  {brands.map((brand) => (
-                    <button
-                      key={brand._id}
-                      onClick={() => handleBrandSelect(brand._id)}
-                      className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs md:text-sm font-black transition-all duration-300 border ${
-                        selectedBrand === brand._id
-                          ? "bg-[#6f1e3d] text-white border-[#6f1e3d] shadow-md"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-[#6f1e3d]/40 hover:text-[#6f1e3d]"
-                      }`}
-                    >
-                      {brand.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+          {/* Brand Filter Bar — only at the top when no category is selected;
+              when a category is chosen it moves under the subcategories. */}
+          {!selectedCategory && (
+            <BrandFilterBar
+              brands={brands}
+              selectedBrand={selectedBrand}
+              onSelect={handleBrandSelect}
+              className="mt-3"
+            />
           )}
         </div>
 
@@ -523,6 +562,9 @@ function ProductsPageContent() {
             selectedCategory={selectedCategory}
             selectedSubCategory={selectedSubCategory}
             categories={categories}
+            brands={brands}
+            selectedBrand={selectedBrand}
+            onBrandSelect={handleBrandSelect}
             onProductClick={(id) => router.push(`/products/${id}`)}
             onSubCategoryClick={(name) => setSelectedSubCategory(name)}
           />
