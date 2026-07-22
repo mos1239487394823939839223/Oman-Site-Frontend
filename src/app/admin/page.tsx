@@ -9,6 +9,7 @@ import {
 import { adminApi } from "@/services/adminApi";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
+import { resolveMediaUrl } from "@/lib/media";
 
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -132,7 +133,7 @@ export default function AdminDashboardPage() {
               {recentProducts.map((product: any) => (
                 <div key={product._id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
                   <img
-                    src={product.imageCover || '/placeholder.svg'}
+                    src={resolveMediaUrl(product.imageCover, "products")}
                     alt={product.title}
                     className="w-10 h-10 rounded-lg object-cover bg-gray-100 flex-shrink-0"
                     onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}

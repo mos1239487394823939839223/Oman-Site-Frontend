@@ -653,12 +653,14 @@ async function readJsonSafe(res: Response): Promise<any> {
  */
 export function toBackendShippingAddress(sa: any = {}): {
   address: string;
+  phone: string;
   city: string;
   postalCode: string;
   country: string;
 } {
   return {
     address: sa.address || sa.details || "",
+    phone: sa.phone || "",
     city: sa.city || "",
     postalCode: sa.postalCode || "",
     country: sa.country || "Oman",
