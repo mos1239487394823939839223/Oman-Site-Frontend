@@ -22,6 +22,8 @@ interface Order {
 /** Backend uses `status`; older/local orders used `orderStatus`. */
 const orderStatusOf = (o: Order) => o.status || o.orderStatus || "pending";
 
+const PAGE_SIZE = 5;
+
 export default function OrdersManagementPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,7 @@ export default function OrdersManagementPage() {
   const [newStatus, setNewStatus] = useState("");
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -38,6 +41,7 @@ export default function OrdersManagementPage() {
       setLoading(true);
       const response = await adminApi.getAllOrders();
       setOrders(response?.data || []);
+      setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
@@ -78,6 +82,12 @@ export default function OrdersManagementPage() {
 
   const totalRevenue = orders.reduce((sum, o) => sum + (o.totalOrderPrice || 0), 0);
   const pendingCount = orders.filter(o => orderStatusOf(o) === "pending").length;
+
+  // Client-side pagination: show PAGE_SIZE orders per page.
+  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const page = Math.min(currentPage, totalPages);
+  const pageStart = (page - 1) * PAGE_SIZE;
+  const paginatedOrders = orders.slice(pageStart, pageStart + PAGE_SIZE);
 
   const statusOptions = [
     { value: "pending",    label: "قيد الانتظار" },
@@ -146,11 +156,51 @@ export default function OrdersManagementPage() {
 
       {/* Orders Table */}
       <OrdersTable
-        orders={orders}
+        orders={paginatedOrders}
         loading={loading}
         onView={handleView}
         onStatusUpdate={handleStatusUpdate}
       />
+
+      {/* Pagination */}
+      {!loading && orders.length > 0 && (
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-gray-500 font-bold">
+            عرض {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, orders.length)} من {orders.length} طلب
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-[#5C2E3A] hover:bg-[#5C2E3A]/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+            >
+              السابق
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setCurrentPage(p)}
+                  className={`w-9 h-9 rounded-xl text-sm font-black transition-colors ${
+                    p === page
+                      ? "bg-[#5C2E3A] text-white"
+                      : "border border-gray-200 bg-white text-gray-700 hover:bg-[#5C2E3A]/5"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-[#5C2E3A] hover:bg-[#5C2E3A]/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+            >
+              التالي
+            </button>
+          </div>
+        </div>
+      )}
 
       <OrderDetailsModal
         isOpen={showOrderModal}
