@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Product } from "@/services/clientApi";
 import DataTable, { Column } from "./DataTable";
 import { FaEdit, FaTrash, FaImage, FaBox } from "react-icons/fa";
+import { formatPrice } from "@/lib/currency";
 
 interface ProductsTableProps {
   products: Product[];
@@ -52,11 +53,11 @@ export default function ProductsTable({
       accessor: (row) => (
         <div>
           <div className="font-medium text-gray-900">
-            ${row.priceAfterDiscount || row.price}
+            {formatPrice(row.priceAfterDiscount || row.price, "OMR")}
           </div>
           {row.priceAfterDiscount && (
             <div className="text-xs text-gray-400 line-through">
-              ${row.price}
+              {formatPrice(row.price, "OMR")}
             </div>
           )}
         </div>

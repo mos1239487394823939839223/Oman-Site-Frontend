@@ -48,6 +48,8 @@ export interface Product {
   description: string;
   price: number;
   priceAfterDiscount?: number;
+  /** Per-currency prices; `price`/`priceAfterDiscount` above are the OMR base. */
+  prices?: { currency: string; amount: number; amountAfterDiscount?: number }[];
   couponCode?: string;
   imageCover: string;
   images: string[];
@@ -465,17 +467,25 @@ export async function removeAddress(addressId: string, token: string) {
 }
 
 
+/** The customer's currently selected display currency (persisted by CurrencyProvider). */
+export function getSelectedCurrency(): string {
+  if (typeof window === "undefined") return "OMR";
+  return localStorage.getItem("app_currency") || "OMR";
+}
+
 export async function addToCart(
   itemId: string,
   token: string,
-  options?: { isGift?: boolean; color?: string }
+  options?: { isGift?: boolean; color?: string; currency?: string }
 ) {
   try {
     // Send either productId or giftId (never both), plus optional color.
+    // Include the selected currency so a brand-new cart is created in it.
     const body: Record<string, string> = options?.isGift
       ? { giftId: itemId }
       : { productId: itemId };
     if (options?.color) body.color = options.color;
+    body.currency = options?.currency || getSelectedCurrency();
 
     const res = await fetch(`${API_BASE}/cart`, {
       method: "POST",
@@ -627,6 +637,29 @@ export async function clearCart(token: string) {
     if (error instanceof Error) throw error;
     throw new Error("Network error. Please check your connection.");
   }
+}
+
+/**
+ * Switch the server cart to a new currency. The backend re-snapshots every
+ * product line into that currency and returns the updated cart.
+ */
+export async function setCartCurrency(currency: string, token: string) {
+  const res = await fetch(`${API_BASE}/cart/currency`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ currency }),
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      handleSessionExpiry();
+      throw new Error("Session expired. Please log in again.");
+    }
+    throw new Error(`Failed to set cart currency: ${res.status} ${res.statusText}`);
+  }
+  return readJsonSafe(res);
 }
 
 

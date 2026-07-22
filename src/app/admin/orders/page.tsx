@@ -5,11 +5,13 @@ import OrdersTable from "@/components/admin/OrdersTable";
 import ConfirmModal from "@/components/admin/ConfirmModal";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
 import { adminApi } from "@/services/adminApi";
+import { formatPrice, CurrencyCode } from "@/lib/currency";
 
 interface Order {
   _id: string;
   user?: { name: string; email: string; };
   totalOrderPrice: number;
+  currency?: string;
   status?: string;
   orderStatus?: string;
   createdAt: string;
@@ -80,7 +82,13 @@ export default function OrdersManagementPage() {
     setShowOrderModal(false);
   };
 
-  const totalRevenue = orders.reduce((sum, o) => sum + (o.totalOrderPrice || 0), 0);
+  // Revenue must be grouped by currency — summing OMR + USD + … is meaningless.
+  const revenueByCurrency = orders.reduce((acc, o) => {
+    const cur = (o.currency || "OMR") as CurrencyCode;
+    acc[cur] = (acc[cur] || 0) + (o.totalOrderPrice || 0);
+    return acc;
+  }, {} as Record<CurrencyCode, number>);
+  const revenueEntries = Object.entries(revenueByCurrency) as [CurrencyCode, number][];
   const pendingCount = orders.filter(o => orderStatusOf(o) === "pending").length;
 
   // Client-side pagination: show PAGE_SIZE orders per page.
@@ -147,9 +155,17 @@ export default function OrdersManagementPage() {
           <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-xl">💰</div>
           <div>
             <p className="text-xs text-gray-500 font-bold tracking-wider">إجمالي الإيرادات</p>
-            <p className="text-2xl font-black text-amber-600">
-              {totalRevenue.toFixed(3)}
-            </p>
+            {revenueEntries.length === 0 ? (
+              <p className="text-2xl font-black text-amber-600">{formatPrice(0, "OMR")}</p>
+            ) : (
+              <div className="flex flex-col">
+                {revenueEntries.map(([cur, total]) => (
+                  <p key={cur} className="text-lg font-black text-amber-600 leading-tight">
+                    {formatPrice(total, cur)}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

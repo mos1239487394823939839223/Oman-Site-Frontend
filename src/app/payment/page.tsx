@@ -2,6 +2,7 @@
 
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { addToCart, createCheckoutSession, getCart, createCashOrder } from "@/services/clientApi";
@@ -12,6 +13,7 @@ import styles from "./PaymentPage.module.css";
 function PaymentPageContent() {
   const { cartItems, cartTotal, cartTotalAfterDiscount, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
+  const { format } = useCurrency();
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -236,7 +238,7 @@ function PaymentPageContent() {
                       <p className="text-xs text-gray-500">الكمية: {item.count}</p>
                     </div>
                     <div className="font-black text-[#5a1832] text-sm whitespace-nowrap">
-                      {item.price * item.count}
+                      {format(item.price * item.count)}
                     </div>
                   </div>
                   );
@@ -246,7 +248,7 @@ function PaymentPageContent() {
               <div className="space-y-3">
                 <div className={styles.summaryRow}>
                   <span className="text-gray-500 font-bold">المجموع الفرعي</span>
-                  <span className="font-black text-gray-900">{cartTotal}</span>
+                  <span className="font-black text-gray-900">{format(cartTotal)}</span>
                 </div>
                 <div className={styles.summaryRow}>
                   <span className="text-gray-500 font-bold">رسوم الشحن</span>
@@ -255,12 +257,12 @@ function PaymentPageContent() {
                 {hasDiscount && (
                   <div className={styles.summaryRow}>
                     <span className="text-gray-500 font-bold">الخصم</span>
-                    <span className="text-amber-600 font-black">- {discountValue}</span>
+                    <span className="text-amber-600 font-black">- {format(discountValue as number)}</span>
                   </div>
                 )}
                 <div className={styles.totalBox}>
                   <span className="font-black text-lg">المبلغ الإجمالي</span>
-                  <span className="text-[#D4AF37] font-black text-3xl">{finalTotal}</span>
+                  <span className="text-[#D4AF37] font-black text-3xl">{format(finalTotal as number)}</span>
                 </div>
               </div>
 

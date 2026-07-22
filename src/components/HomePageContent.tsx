@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Product, Category, getProducts, getCategories, getServices } from "@/services/clientApi";
 import { useCart } from "@/components/CartProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
+import { priceForCurrency } from "@/lib/currency";
 import { useAuth } from "@/components/AuthProvider";
 
 interface Service {
@@ -47,6 +49,7 @@ export default function HomePageContent() {
 
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
+  const { currency, format } = useCurrency();
 
   const fetchProducts = async () => {
     try {
@@ -224,7 +227,7 @@ export default function HomePageContent() {
                     </div>
                     <h3 className="text-xl font-black text-gray-900 mb-2 truncate">{product.title}</h3>
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl font-black text-[#5a1832]">{product.price?.toLocaleString()}</span>
+                      <span className="text-2xl font-black text-[#5a1832]">{format(priceForCurrency(product, currency).amount)}</span>
                       <button
                         onClick={() => handleAddToCart(product._id)}
                         className="w-12 h-12 bg-[#5a1832] text-white rounded-2xl flex items-center justify-center hover:bg-[#D4AF37] transition-all active:scale-90"

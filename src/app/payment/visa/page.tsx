@@ -2,6 +2,7 @@
 
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { addToCart, createMockVisaOrder, getCart } from "@/services/clientApi";
@@ -12,6 +13,7 @@ import styles from "./VisaPaymentPage.module.css";
 function VisaPaymentPageContent() {
   const { cartItems, cartTotal, cartTotalAfterDiscount, appliedCoupon, applyCoupon, removeCoupon, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
+  const { format } = useCurrency();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -328,7 +330,7 @@ function VisaPaymentPageContent() {
                   {loading ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                   ) : (
-                    <>أتمم الدفع بقيمة {finalTotal}</>
+                    <>أتمم الدفع بقيمة {format(finalTotal)}</>
                   )}
                 </button>
 
@@ -359,7 +361,7 @@ function VisaPaymentPageContent() {
                       <p className="text-xs text-gray-500">الكمية: {item.count}</p>
                     </div>
                     <div className="font-black text-[#5a1832] text-sm">
-                      {item.price * item.count}
+                      {format(item.price * item.count)}
                     </div>
                   </div>
                   );
@@ -435,7 +437,7 @@ function VisaPaymentPageContent() {
               <div className={styles.totalSection}>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-500 font-bold">المجموع الفرعي</span>
-                  <span className="font-black text-gray-900">{cartTotal}</span>
+                  <span className="font-black text-gray-900">{format(cartTotal)}</span>
                 </div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-500 font-bold">الشحن</span>
@@ -444,12 +446,12 @@ function VisaPaymentPageContent() {
                 {hasDiscount && (
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-gray-500 font-bold">الخصم</span>
-                    <span className="font-black text-amber-600">- {discountValue}</span>
+                    <span className="font-black text-amber-600">- {format(discountValue)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center bg-[#5a1832] p-4 rounded-2xl mt-2">
                   <span className="text-white font-black text-lg">الإجمالي الكلي</span>
-                  <span className="text-[#D4AF37] font-black text-2xl">{finalTotal}</span>
+                  <span className="text-[#D4AF37] font-black text-2xl">{format(finalTotal)}</span>
                 </div>
               </div>
             </div>

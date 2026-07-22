@@ -7,6 +7,8 @@ import { FaTrashAlt, FaPlus, FaMinus, FaArrowLeft, FaShoppingCart, FaCity, FaPho
 import { useTranslation } from "react-i18next";
 import { createCashOrder, createCheckoutSession, getCart } from "@/services/clientApi";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
+import { priceForCurrency } from "@/lib/currency";
 import { resolveMediaUrl } from "@/lib/media";
 
 type Step = 'cart' | 'checkout' | 'success';
@@ -17,6 +19,7 @@ export default function CartPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { dir, isArabic } = useLanguage();
+  const { format, currency } = useCurrency();
 
   const [step, setStep] = useState<Step>('cart');
   const [savedTotal, setSavedTotal] = useState(0);
@@ -149,7 +152,7 @@ export default function CartPage() {
         <div className="bg-[#5C2E3A]/5 rounded-2xl px-6 py-4 mb-8">
           <p className="text-xs text-gray-400 mb-1">{t('cart.orderRef')}</p>
           <p className="text-xl font-black text-[#5C2E3A]">{orderRef}</p>
-          <p className="text-sm text-gray-500 mt-2">{t('cart.total')}: <span className="font-black text-[#D4AF37]">{savedTotal.toFixed(3)} {t('common.egp')}</span></p>
+          <p className="text-sm text-gray-500 mt-2">{t('cart.total')}: <span className="font-black text-[#D4AF37]">{format(savedTotal)}</span></p>
         </div>
         <div className="space-y-3">
           <button onClick={() => router.push('/products')} className="w-full h-12 bg-[#5C2E3A] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#4A2330] transition-all">
@@ -257,14 +260,15 @@ export default function CartPage() {
                         // price below the product's own price. Show the original
                         // struck-through when the server has discounted the line.
                         const p: any = item.product || {};
-                        const origUnit = p.priceAfterDiscount || p.price || 0;
+                        // Original (pre-coupon) unit price of this line in the cart currency.
+                        const origUnit = priceForCurrency(p, currency).amount || 0;
                         const lineDiscounted = origUnit > 0 && item.price < origUnit;
                         return (
                           <span className="flex items-center gap-2">
                             {lineDiscounted && (
-                              <span className="text-gray-400 text-[11px] line-through font-medium">{origUnit.toLocaleString()}</span>
+                              <span className="text-gray-400 text-[11px] line-through font-medium">{format(origUnit)}</span>
                             )}
-                            <span className="font-black text-[#5C2E3A]">{item.price.toLocaleString()}</span>
+                            <span className="font-black text-[#5C2E3A]">{format(item.price)}</span>
                           </span>
                         );
                       })()}
@@ -314,17 +318,17 @@ export default function CartPage() {
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
               <div className="flex justify-between text-sm text-gray-500 mb-2">
                 <span>{t('cart.total')} ({cartItems.length})</span>
-                <span className="font-bold">{cartTotal.toLocaleString()} {t('common.egp')}</span>
+                <span className="font-bold">{format(cartTotal)}</span>
               </div>
               {hasCoupon && (
                 <>
                   <div className="flex justify-between text-sm text-amber-600 mb-2">
                     <span>{isArabic ? 'خصم الكوبون' : 'Coupon discount'}</span>
-                    <span className="font-bold">- {couponSavings.toLocaleString()} {t('common.egp')}</span>
+                    <span className="font-bold">- {format(couponSavings)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-[#5C2E3A] border-t border-gray-100 pt-2 mb-2">
                     <span className="font-black">{isArabic ? 'الإجمالي بعد الخصم' : 'Total after discount'}</span>
-                    <span className="font-black">{effectiveSubtotal.toLocaleString()} {t('common.egp')}</span>
+                    <span className="font-black">{format(effectiveSubtotal)}</span>
                   </div>
                 </>
               )}
@@ -347,7 +351,7 @@ export default function CartPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div onClick={() => setDeliveryMethod('delivery')} className={sel(deliveryMethod === 'delivery')}>
                       <div className={iconBox(deliveryMethod === 'delivery')}><FaTruck size={16} /></div>
-                      <div><p className="font-black text-base">{t('cart.deliveryOptionDelivery')}</p><p className="text-sm text-[#D4AF37] font-bold">{shippingFee} {t('common.egp')}</p></div>
+                      <div><p className="font-black text-base">{t('cart.deliveryOptionDelivery')}</p><p className="text-sm text-[#D4AF37] font-bold">{format(shippingFee)}</p></div>
                     </div>
                     <div onClick={() => setDeliveryMethod('pickup')} className={sel(deliveryMethod === 'pickup')}>
                       <div className={iconBox(deliveryMethod === 'pickup')}><FaBoxOpen size={16} /></div>
@@ -407,7 +411,7 @@ export default function CartPage() {
                   <p className="text-sm font-black text-[#5C2E3A] uppercase tracking-widest mb-1">{t('cart.additionalOptionsTitle')}</p>
                   <div onClick={() => setNeedsWrapping(!needsWrapping)} className={sel(needsWrapping) + (needsWrapping ? ' !border-[#D4AF37] !bg-[#D4AF37]/5' : '')}>
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${needsWrapping ? 'bg-[#D4AF37] text-white' : 'bg-gray-100 text-gray-400'}`}><FaGift size={16} /></div>
-                    <div className="flex-1"><p className="font-black text-base">{t('cart.wrappingLabel')}</p><p className="text-sm text-gray-500">+{wrappingFee} {t('common.egp')}</p></div>
+                    <div className="flex-1"><p className="font-black text-base">{t('cart.wrappingLabel')}</p><p className="text-sm text-gray-500">+{format(wrappingFee)}</p></div>
                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${needsWrapping ? 'bg-[#D4AF37] border-[#D4AF37]' : 'border-gray-300'}`}>{needsWrapping && <FaCheck className="text-white" size={8} />}</div>
                   </div>
                 </div>
@@ -433,10 +437,10 @@ export default function CartPage() {
                 <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">{t('cart.summaryTitle')}</p>
                 <div className="space-y-2.5 mb-6">
                   {[
-                    { label: t('cart.subtotalLabel'), val: `${cartTotal.toLocaleString()} ${t('common.egp')}` },
-                    { label: t('cart.taxLabel'), val: `${taxAmount.toFixed(3)} ${t('common.egp')}` },
-                    { label: t('cart.shippingLabel'), val: shippingFee === 0 ? t('cart.free') : `${shippingFee} ${t('common.egp')}`, gold: shippingFee > 0, green: shippingFee === 0 },
-                    ...(needsWrapping ? [{ label: t('cart.giftWrapLabel'), val: `${wrappingFee.toFixed(3)} ${t('common.egp')}`, gold: true }] : []),
+                    { label: t('cart.subtotalLabel'), val: format(cartTotal) },
+                    { label: t('cart.taxLabel'), val: format(taxAmount) },
+                    { label: t('cart.shippingLabel'), val: shippingFee === 0 ? t('cart.free') : format(shippingFee), gold: shippingFee > 0, green: shippingFee === 0 },
+                    ...(needsWrapping ? [{ label: t('cart.giftWrapLabel'), val: format(wrappingFee), gold: true }] : []),
                   ].map((r, i) => (
                     <div key={i} className="flex justify-between text-sm text-white/70">
                       <span>{r.label}</span>
@@ -446,8 +450,7 @@ export default function CartPage() {
                   <div className="border-t border-white/10 pt-3 flex justify-between items-end">
                     <span className="font-black text-lg">{t('cart.finalTotalLabel')}</span>
                     <div className="text-end">
-                      <span className="text-4xl font-black text-[#D4AF37]">{finalTotal.toFixed(3)}</span>
-                      <span className="text-xs text-white/40 block">{t('cart.currencyName')}</span>
+                      <span className="text-4xl font-black text-[#D4AF37]">{format(finalTotal)}</span>
                     </div>
                   </div>
                 </div>

@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { searchProducts, Product } from "@/services/clientApi";
 import { useTranslation } from "react-i18next";
+import { useCurrency } from "@/components/CurrencyProvider";
+import { priceForCurrency } from "@/lib/currency";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
@@ -11,6 +13,7 @@ interface SearchBarProps {
 
 export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
   const { t } = useTranslation();
+  const { currency, format } = useCurrency();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -156,7 +159,10 @@ export default function SearchBar({ onSearch, placeholder }: SearchBarProps) {
                 </h4>
                 <p className="text-xs text-gray-500 font-normal">{product.category.name}</p>
                 <p className="text-sm font-medium text-maroon-main">
-                  {product.priceAfterDiscount ? product.priceAfterDiscount.toLocaleString() : product.price.toLocaleString()} {t('common.egp')}
+                  {(() => {
+                    const { amount, amountAfterDiscount } = priceForCurrency(product, currency);
+                    return format(amountAfterDiscount ?? amount);
+                  })()}
                 </p>
               </div>
             </div>

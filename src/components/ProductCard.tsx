@@ -20,6 +20,8 @@ import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import { Product } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
 import { useTranslation } from "react-i18next";
+import { useCurrency } from "@/components/CurrencyProvider";
+import { priceForCurrency } from "@/lib/currency";
 
 interface ProductCardProps {
   product: Product;
@@ -28,6 +30,7 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  const { currency, format } = useCurrency();
   const [imgSrc, setImgSrc] = useState(resolveMediaUrl(product.imageCover, "products"));
   const [imageLoading, setImageLoading] = useState(true);
 
@@ -35,16 +38,18 @@ export default function ProductCard({ product }: ProductCardProps) {
     router.push(`/products/${product._id}`);
   };
 
+  // Resolve price in the active currency (falls back to base OMR).
+  const { amount: baseAmount, amountAfterDiscount } = priceForCurrency(product, currency);
   const hasDiscount =
-    product.priceAfterDiscount !== undefined &&
-    product.priceAfterDiscount > 0 &&
-    product.priceAfterDiscount < product.price;
+    amountAfterDiscount !== undefined &&
+    amountAfterDiscount > 0 &&
+    amountAfterDiscount < baseAmount;
 
   const discountPercent = hasDiscount
-    ? Math.round(((product.price - (product.priceAfterDiscount || 0)) / product.price) * 100)
+    ? Math.round(((baseAmount - (amountAfterDiscount || 0)) / baseAmount) * 100)
     : 0;
 
-  const displayPrice = hasDiscount ? product.priceAfterDiscount : product.price;
+  const displayPrice = hasDiscount ? amountAfterDiscount : baseAmount;
 
   return (
     <Card
@@ -191,11 +196,11 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         <Stack direction="row" spacing={1} sx={{ minHeight: 30, alignItems: "center" }}>
           <Typography variant="h6" color="primary.main" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-              {displayPrice?.toLocaleString()}
+              {format(displayPrice)}
           </Typography>
           {hasDiscount && (
             <Typography variant="caption" color="text.disabled" sx={{ textDecoration: "line-through" }}>
-              {product.price?.toLocaleString()}
+              {format(baseAmount)}
             </Typography>
           )}
         </Stack>

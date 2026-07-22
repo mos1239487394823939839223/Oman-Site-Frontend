@@ -18,6 +18,7 @@ import {
   FaUser,
   FaClock,
 } from "react-icons/fa";
+import { formatPrice, CurrencyCode } from "@/lib/currency";
 
 interface OrderItem {
   _id?: string;
@@ -37,6 +38,7 @@ interface Order {
   totalOrderPrice: number;
   taxPrice?: number;
   shippingPrice?: number;
+  currency?: string;
   status?: string;
   orderStatus?: string;
   statusUpdatedAt?: string;
@@ -190,15 +192,17 @@ export default function OrderDetailsModal({
       : "عند الاستلام";
 
     const items: OrderItem[] = Array.isArray(order.cartItems) ? order.cartItems : [];
+    const cur = (order.currency || "OMR") as CurrencyCode;
 
     return {
       orderNumber: `#${order._id.slice(-8).toUpperCase()}`,
       customerName: order.user?.name || "عميل",
       customerEmail: order.user?.email || "",
       phone: sa.phone || "",
-      totalPrice: `${order.totalOrderPrice?.toFixed(3)}`,
-      taxPrice: typeof order.taxPrice === "number" ? `${order.taxPrice.toFixed(3)}` : "",
-      shippingPrice: typeof order.shippingPrice === "number" ? `${order.shippingPrice.toFixed(3)}` : "",
+      currency: cur,
+      totalPrice: formatPrice(order.totalOrderPrice, cur),
+      taxPrice: typeof order.taxPrice === "number" ? formatPrice(order.taxPrice, cur) : "",
+      shippingPrice: typeof order.shippingPrice === "number" ? formatPrice(order.shippingPrice, cur) : "",
       status: status.label,
       isPaid: order.isPaid,
       isDelivered: order.isDelivered,
@@ -370,10 +374,10 @@ export default function OrderDetailsModal({
                           </div>
                           <div className="flex-1 min-w-0 text-right">
                             <p className="text-sm font-black text-[#1F2937] truncate">{name}</p>
-                            <p className="text-[11px] text-gray-500 font-bold">الكمية: {qty} × {unit.toLocaleString()}</p>
+                            <p className="text-[11px] text-gray-500 font-bold">الكمية: {qty} × {formatPrice(unit, detailValues.currency)}</p>
                           </div>
                           <div className="font-black text-[#5C2E3A] text-sm shrink-0">
-                            {(unit * qty).toLocaleString()}
+                            {formatPrice(unit * qty, detailValues.currency)}
                           </div>
                         </div>
                       );

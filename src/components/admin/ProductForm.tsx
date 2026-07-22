@@ -3,7 +3,21 @@
 import { useState, useEffect } from "react";
 import { Product, Category, Brand, Subcategory } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
+import {
+  SUPPORTED_CURRENCIES,
+  CURRENCIES,
+  CurrencyCode,
+  BASE_CURRENCY,
+} from "@/lib/currency";
 import LoadingSpinner from "./LoadingSpinner";
+
+type CurrencyRow = { amount: string; discount: string };
+
+const emptyCurrencyRows = (): Record<CurrencyCode, CurrencyRow> =>
+  SUPPORTED_CURRENCIES.reduce((acc, code) => {
+    acc[code] = { amount: "", discount: "" };
+    return acc;
+  }, {} as Record<CurrencyCode, CurrencyRow>);
 
 interface ProductFormProps {
   product?: Product;
@@ -58,6 +72,10 @@ export default function ProductForm({
   const [imageCoverFile, setImageCoverFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Per-currency prices (products only). OMR is the required base currency.
+  const [currencyPrices, setCurrencyPrices] = useState<Record<CurrencyCode, CurrencyRow>>(
+    emptyCurrencyRows()
+  );
 
   useEffect(() => {
     if (product) {
@@ -75,8 +93,40 @@ export default function ProductForm({
       });
       setCurrentImageCover(product.imageCover || "");
       setCurrentImages(product.images || []);
+
+      // Seed per-currency rows from product.prices, falling back to the legacy
+      // base price for OMR on older products that predate multi-currency.
+      const rows = emptyCurrencyRows();
+      const entries = (product as any).prices;
+      if (Array.isArray(entries) && entries.length) {
+        for (const p of entries) {
+          if (rows[p.currency as CurrencyCode]) {
+            rows[p.currency as CurrencyCode] = {
+              amount: p.amount != null ? String(p.amount) : "",
+              discount: p.amountAfterDiscount != null ? String(p.amountAfterDiscount) : "",
+            };
+          }
+        }
+      } else if (product.price) {
+        rows[BASE_CURRENCY] = {
+          amount: String(product.price),
+          discount: product.priceAfterDiscount != null ? String(product.priceAfterDiscount) : "",
+        };
+      }
+      setCurrencyPrices(rows);
     }
   }, [product]);
+
+  const handleCurrencyChange = (
+    code: CurrencyCode,
+    field: "amount" | "discount",
+    value: string
+  ) => {
+    setCurrencyPrices((prev) => ({ ...prev, [code]: { ...prev[code], [field]: value } }));
+    if (errors[`price_${code}`]) {
+      setErrors((prev) => ({ ...prev, [`price_${code}`]: "" }));
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -121,14 +171,21 @@ export default function ProductForm({
       newErrors.description = "Description must be at least 20 characters";
     }
     if (!isGift) {
-      if (formData.price <= 0) {
-        newErrors.price = "Price must be greater than 0";
+      const omr = currencyPrices[BASE_CURRENCY];
+      if (!omr.amount || Number(omr.amount) <= 0) {
+        newErrors[`price_${BASE_CURRENCY}`] = "OMR price is required and must be greater than 0";
       }
-      if (formData.priceAfterDiscount !== undefined && formData.priceAfterDiscount !== null) {
-        if (formData.priceAfterDiscount <= 0) {
-          newErrors.priceAfterDiscount = "Discount price must be greater than 0";
-        } else if (formData.priceAfterDiscount > formData.price) {
-          newErrors.priceAfterDiscount = "Discount price cannot exceed price";
+      for (const code of SUPPORTED_CURRENCIES) {
+        const row = currencyPrices[code];
+        if (row.amount !== "" && Number(row.amount) < 0) {
+          newErrors[`price_${code}`] = "Price cannot be negative";
+        }
+        if (row.discount !== "") {
+          if (Number(row.discount) <= 0) {
+            newErrors[`price_${code}`] = "Discount must be greater than 0";
+          } else if (row.amount !== "" && Number(row.discount) >= Number(row.amount)) {
+            newErrors[`price_${code}`] = "Discount must be less than the price";
+          }
         }
       }
     }
@@ -160,8 +217,6 @@ export default function ProductForm({
     // Original values to diff against
     const origTitle = product?.title || "";
     const origDesc = product?.description || "";
-    const origPrice = product?.price ?? 0;
-    const origPAD = product?.priceAfterDiscount;
     const origCouponCode = (product as any)?.couponCode || "";
     const origQty = product?.quantity ?? 0;
     const origCategory = product?.category?._id || "";
@@ -179,8 +234,21 @@ export default function ProductForm({
     if (isGift) {
       if (!isEdit) payload.append("price", "0");
     } else {
-      if (!isEdit || Number(formData.price) !== origPrice)
-        payload.append("price", String(Number(formData.price)));
+      // Multi-currency: send the full per-currency `prices` array. The backend
+      // derives the base OMR `price`/`priceAfterDiscount` from the OMR entry.
+      const pricesPayload = SUPPORTED_CURRENCIES
+        .filter((code) => currencyPrices[code].amount !== "" && !isNaN(Number(currencyPrices[code].amount)))
+        .map((code) => {
+          const amount = Number(currencyPrices[code].amount);
+          const d = currencyPrices[code].discount;
+          const amountAfterDiscount = d !== "" && !isNaN(Number(d)) ? Number(d) : undefined;
+          return {
+            currency: code,
+            amount,
+            ...(amountAfterDiscount !== undefined ? { amountAfterDiscount } : {}),
+          };
+        });
+      payload.append("prices", JSON.stringify(pricesPayload));
     }
 
     if (!isEdit || Number(formData.quantity) !== origQty)
@@ -191,15 +259,6 @@ export default function ProductForm({
 
     if (formData.brand && (!isEdit || formData.brand !== origBrand))
       payload.append("brand", formData.brand);
-
-    if (!isGift &&
-      formData.priceAfterDiscount !== undefined &&
-      formData.priceAfterDiscount !== null &&
-      !isNaN(Number(formData.priceAfterDiscount))) {
-      const newPAD = Number(formData.priceAfterDiscount);
-      if (!isEdit || newPAD !== (origPAD ?? undefined))
-        payload.append("priceAfterDiscount", String(newPAD));
-    }
 
     if (!isGift) {
       const newCouponCode = (formData.couponCode || "").trim();
@@ -266,48 +325,60 @@ export default function ProductForm({
         </p>
       )}
 
-      {/* Price Fields (products only) */}
+      {/* Price Fields (products only) — one row per currency */}
       {!isGift && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-              Price *
-            </label>
-            <input
-              type="number"
-              id="price"
-              name="price"
-              value={formData.price}
-              onChange={handleChange}
-              min="0"
-              step="0.01"
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${errors.price ? "border-red-500" : "border-gray-300"
-                }`}
-            />
-            {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
+        <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-gray-800">Prices by currency</p>
+            <span className="text-xs text-gray-400">OMR is required; others optional</span>
           </div>
-
-          <div>
-            <label
-              htmlFor="priceAfterDiscount"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Price After Discount
-            </label>
-            <input
-              type="number"
-              id="priceAfterDiscount"
-              name="priceAfterDiscount"
-              value={formData.priceAfterDiscount || ""}
-              onChange={handleChange}
-              min="0"
-              step="0.01"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
-            />
-            {errors.priceAfterDiscount && (
-              <p className="mt-1 text-sm text-red-600">{errors.priceAfterDiscount}</p>
-            )}
+          <div className="hidden md:grid md:grid-cols-[90px_1fr_1fr] gap-3 px-1 text-xs font-semibold text-gray-500">
+            <span>Currency</span>
+            <span>Price</span>
+            <span>Price after discount</span>
           </div>
+          {SUPPORTED_CURRENCIES.map((code) => {
+            const meta = CURRENCIES[code];
+            const isBase = code === BASE_CURRENCY;
+            return (
+              <div key={code}>
+                <div className="grid grid-cols-2 md:grid-cols-[90px_1fr_1fr] gap-3 items-center">
+                  <div className="col-span-2 md:col-span-1 flex items-center gap-2 text-sm font-bold text-gray-700">
+                    <span>{code}</span>
+                    <span className="text-gray-400">{meta.symbol}</span>
+                    {isBase && <span className="text-red-500">*</span>}
+                  </div>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    aria-label={`${code} price`}
+                    value={currencyPrices[code].amount}
+                    onChange={(e) => handleCurrencyChange(code, "amount", e.target.value)}
+                    min="0"
+                    step="0.001"
+                    placeholder={`Price (${code})`}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary ${
+                      errors[`price_${code}`] ? "border-red-500" : "border-gray-300"
+                    }`}
+                  />
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    aria-label={`${code} price after discount`}
+                    value={currencyPrices[code].discount}
+                    onChange={(e) => handleCurrencyChange(code, "discount", e.target.value)}
+                    min="0"
+                    step="0.001"
+                    placeholder="Discount (optional)"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                  />
+                </div>
+                {errors[`price_${code}`] && (
+                  <p className="mt-1 text-sm text-red-600">{errors[`price_${code}`]}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

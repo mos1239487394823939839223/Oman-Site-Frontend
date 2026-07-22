@@ -37,6 +37,7 @@ import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
 import DiscountRoundedIcon from "@mui/icons-material/DiscountRounded";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import { useAppSnackbar } from "@/components/mui/AppSnackbarProvider";
 import { createCashOrder, createCheckoutSession, getCart } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
@@ -69,6 +70,7 @@ export default function CheckoutPage() {
     clearCart,
   } = useCart();
   const { isAuthenticated } = useAuth();
+  const { format } = useCurrency();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -538,12 +540,12 @@ export default function CheckoutPage() {
                               {title}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              Qty: {item.count} x {item.price.toLocaleString()}
+                              Qty: {item.count} x {format(item.price)}
                             </Typography>
                           </Box>
 
                           <Typography variant="body2" color="primary.main" sx={{ fontWeight: 800 }}>
-                            {(item.count * item.price).toLocaleString()}
+                            {format(item.count * item.price)}
                           </Typography>
                         </Box>
                       );
@@ -597,14 +599,14 @@ export default function CheckoutPage() {
                   <Stack spacing={1.25} sx={{ mt: 2.5 }}>
                     <Stack direction="row" sx={{ justifyContent: "space-between" }}>
                       <Typography color="text.secondary">Subtotal</Typography>
-                      <Typography sx={{ fontWeight: 700 }}>{cartTotal.toLocaleString()}</Typography>
+                      <Typography sx={{ fontWeight: 700 }}>{format(cartTotal)}</Typography>
                     </Stack>
 
                     {hasDiscount && (
                       <Stack direction="row" sx={{ justifyContent: "space-between" }}>
                         <Typography color="success.main">Discount</Typography>
                         <Typography color="success.main" sx={{ fontWeight: 700 }}>
-                          -{(cartTotal - (cartTotalAfterDiscount as number)).toLocaleString()}
+                          -{format(cartTotal - (cartTotalAfterDiscount as number))}
                         </Typography>
                       </Stack>
                     )}
@@ -618,7 +620,7 @@ export default function CheckoutPage() {
                       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Total</Typography>
                         <Typography variant="h6" color="primary.main" sx={{ fontWeight: 800 }}>
-                          {finalTotal.toLocaleString()}
+                          {format(finalTotal)}
                         </Typography>
                       </Stack>
                     </Box>

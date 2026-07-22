@@ -10,6 +10,9 @@ import Heart from "@/components/Heart";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import ProductCard from "@/components/ProductCard";
+import CurrencySwitcher from "@/components/CurrencySwitcher";
+import { useCurrency } from "@/components/CurrencyProvider";
+import { priceForCurrency } from "@/lib/currency";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -51,6 +54,7 @@ export default function ProductDetailContent({ productId, isGift = false }: Prod
   const { isAuthenticated, user } = useAuth();
   const { t } = useTranslation();
   const { dir, isArabic } = useLanguage();
+  const { currency, format } = useCurrency();
 
   const fetchProductData = useCallback(async () => {
     if (!productId) return;
@@ -284,15 +288,25 @@ export default function ProductDetailContent({ productId, isGift = false }: Prod
             </div>
           </div>
 
-          <div className="flex items-baseline gap-4">
-            <span className="text-5xl font-black text-[#5a1832]">
-              {(product.priceAfterDiscount || product.price).toLocaleString()}
-            </span>
-            {product.priceAfterDiscount && (
-              <span className="text-xl text-gray-300 line-through font-bold">
-                {product.price.toLocaleString()}
-              </span>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {(() => {
+              const { amount, amountAfterDiscount } = priceForCurrency(product, currency);
+              const discounted =
+                amountAfterDiscount !== undefined && amountAfterDiscount < amount;
+              return (
+                <div className="flex items-baseline gap-4">
+                  <span className="text-5xl font-black text-[#5a1832]">
+                    {format(discounted ? amountAfterDiscount : amount)}
+                  </span>
+                  {discounted && (
+                    <span className="text-xl text-gray-300 line-through font-bold">
+                      {format(amount)}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
+            {!isGift && <CurrencySwitcher />}
           </div>
 
           <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100">

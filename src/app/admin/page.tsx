@@ -10,6 +10,7 @@ import { adminApi } from "@/services/adminApi";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { resolveMediaUrl } from "@/lib/media";
+import { formatPrice, CurrencyCode } from "@/lib/currency";
 
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -140,7 +141,7 @@ export default function AdminDashboardPage() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-gray-900 text-xs font-semibold truncate">{product.title}</p>
-                    <p className="text-gray-500 text-[11px]">{product.price}</p>
+                    <p className="text-gray-500 text-[11px]">{formatPrice(product.price, "OMR")}</p>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-100">Active</span>
                 </div>
@@ -179,7 +180,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-gray-900 text-xs font-semibold truncate">Order #{(order._id || "").slice(-6).toUpperCase()}</p>
-                    <p className="text-gray-500 text-[11px]">{order.totalOrderPrice || 0}</p>
+                    <p className="text-gray-500 text-[11px]">{formatPrice(order.totalOrderPrice || 0, (order.currency || "OMR") as CurrencyCode)}</p>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${
                     status === "delivered"

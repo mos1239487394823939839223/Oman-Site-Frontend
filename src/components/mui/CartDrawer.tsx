@@ -17,6 +17,7 @@ import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { useCart } from "@/components/CartProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import { resolveMediaUrl } from "@/lib/media";
 
 type CartDrawerProps = {
@@ -26,6 +27,7 @@ type CartDrawerProps = {
 
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
   const { cartItems, cartTotal, updateCartItem, removeFromCart, loading } = useCart();
+  const { format } = useCurrency();
 
   return (
     <Drawer
@@ -98,7 +100,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                       {title}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Unit: {item.price.toLocaleString()}
+                      Unit: {format(item.price)}
                     </Typography>
 
                     <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mt: 0.5 }}>
@@ -145,7 +147,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
         <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
           <Typography color="text.secondary">Subtotal</Typography>
           <Typography variant="h6" color="primary.main" sx={{ fontWeight: 800 }}>
-            {cartTotal.toLocaleString()}
+            {format(cartTotal)}
           </Typography>
         </Stack>
 

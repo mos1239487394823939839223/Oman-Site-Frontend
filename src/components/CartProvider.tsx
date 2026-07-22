@@ -114,6 +114,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     refreshCart();
   }, [isAuthenticated, refreshCart]);
 
+  // When the customer switches currency, CurrencyProvider re-resolves the server
+  // cart and fires this event; re-fetch so item prices/totals reflect it.
+  useEffect(() => {
+    const onCurrencyChanged = () => refreshCart();
+    window.addEventListener("currencyChanged", onCurrencyChanged);
+    return () => window.removeEventListener("currencyChanged", onCurrencyChanged);
+  }, [refreshCart]);
+
   const addToCart = async (
     itemId: string,
     _quantity: number = 1,

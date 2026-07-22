@@ -2,11 +2,13 @@
 
 import DataTable, { Column } from "./DataTable";
 import { FaEye, FaTruck, FaWarehouse, FaCreditCard, FaMoneyBillWave } from "react-icons/fa";
+import { formatPrice, CurrencyCode } from "@/lib/currency";
 
 interface Order {
   _id: string;
   user?: { name: string; email: string; };
   totalOrderPrice: number;
+  currency?: string;
   status?: string;
   orderStatus?: string;
   createdAt: string;
@@ -110,7 +112,9 @@ export default function OrdersTable({ orders, loading = false, onView, onStatusU
       header: "المبلغ",
       accessor: (row) => (
         <div>
-          <span className="font-black text-[#5C2E3A] text-base">{row.totalOrderPrice?.toFixed(3)}</span>
+          <span className="font-black text-[#5C2E3A] text-base">
+            {formatPrice(row.totalOrderPrice, (row.currency || "OMR") as CurrencyCode)}
+          </span>
         </div>
       ),
       sortable: true,

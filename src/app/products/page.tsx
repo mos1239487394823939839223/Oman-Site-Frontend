@@ -10,6 +10,7 @@ import { resolveMediaUrl } from "@/lib/media";
 import { FaSort, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import ProductCard from "@/components/ProductCard";
+import CurrencySwitcher from "@/components/CurrencySwitcher";
 
 type SubcategoryRef =
   | string
@@ -284,6 +285,10 @@ function SelectedCategoryView({
         onSelect={onBrandSelect}
         className="mb-6"
       />
+
+      <div className="flex justify-end mb-6">
+        <CurrencySwitcher />
+      </div>
 
       {filteredProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">

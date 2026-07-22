@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import { CartProvider } from "@/components/CartProvider";
+import { CurrencyProvider } from "@/components/CurrencyProvider";
 import { WishlistProvider } from "@/components/WishlistProvider";
 import { LanguageProvider, useLanguage } from "@/components/LanguageProvider";
 import AppMuiProvider from "@/components/mui/AppMuiProvider";
@@ -20,9 +21,11 @@ function MuiBoundProviders({ children }: { children: ReactNode }) {
     <AppMuiProvider direction={dir} language={language}>
       <AppSnackbarProvider>
         <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>{children}</WishlistProvider>
-          </CartProvider>
+          <CurrencyProvider>
+            <CartProvider>
+              <WishlistProvider>{children}</WishlistProvider>
+            </CartProvider>
+          </CurrencyProvider>
         </AuthProvider>
       </AppSnackbarProvider>
     </AppMuiProvider>

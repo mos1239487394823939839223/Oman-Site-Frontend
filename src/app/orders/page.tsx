@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { useTranslation } from "react-i18next";
 import { FaShoppingBag, FaCalendarAlt, FaCreditCard, FaCheckCircle, FaHourglassHalf, FaTruck } from "react-icons/fa";
+import { formatPrice, CurrencyCode } from "@/lib/currency";
 
 interface OrderItem {
   product?: {
@@ -25,6 +26,7 @@ interface Order {
   date?: string;
   totalOrderPrice?: number;
   total?: number;
+  currency?: string;
   paymentMethodType?: string;
   paymentMethod?: string;
   isPaid?: boolean;
@@ -156,6 +158,7 @@ export default function OrdersPage() {
               const totalPrice = order.totalOrderPrice || order.total || 0;
               const itemsList = order.cartItems || order.items || [];
               const method = order.paymentMethodType || order.paymentMethod || 'card';
+              const orderCurrency = (order.currency || 'OMR') as CurrencyCode;
 
               return (
                 <div key={orderId} className="bg-white rounded-3xl border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 p-6 md:p-8 space-y-6 overflow-hidden">
@@ -214,7 +217,7 @@ export default function OrdersPage() {
 
                     <div className="col-span-2 md:col-span-1 space-y-1">
                       <div className="text-gray-400 text-xs font-black">{isAr ? 'إجمالي الطلب' : 'Total Amount'}</div>
-                      <p className="text-xl font-black text-[#6f1e3d]">{totalPrice.toLocaleString()}</p>
+                      <p className="text-xl font-black text-[#6f1e3d]">{formatPrice(totalPrice, orderCurrency)}</p>
                     </div>
                   </div>
 
@@ -242,7 +245,7 @@ export default function OrdersPage() {
                               <div className="text-right">
                                 <h5 className="font-bold text-gray-800 text-sm truncate">{productTitle}</h5>
                                 <p className="text-xs text-gray-400 font-bold mt-1">
-                                  {isAr ? 'الكمية:' : 'Qty:'} {itemQty} × {itemPrice.toLocaleString()}                                </p>
+                                  {isAr ? 'الكمية:' : 'Qty:'} {itemQty} × {formatPrice(itemPrice, orderCurrency)}                                </p>
                               </div>
                             </div>
                           </div>
