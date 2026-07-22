@@ -90,7 +90,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           className="object-contain"
           loading="lazy"
           placeholder="blur"
-          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mPwUjaoBwACdQEdOZjhLQAAAABJRU5ErkJggg=="
           onError={() => setImgSrc("/placeholder.svg")}
           onLoad={() => setImageLoading(false)}
         />
