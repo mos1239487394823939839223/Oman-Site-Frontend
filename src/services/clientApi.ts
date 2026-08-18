@@ -975,7 +975,11 @@ export async function applyCoupon(coupon: string, token: string) {
     },
     body: JSON.stringify({ coupon }),
   });
-  if (!res.ok) throw new Error("Failed to apply coupon");
+  if (!res.ok) {
+    // Surface the backend's reason (invalid/expired, already used, limit reached).
+    const err = await res.json().catch(() => ({} as any));
+    throw new Error(err?.message || "Failed to apply coupon");
+  }
   return res.json();
 }
 

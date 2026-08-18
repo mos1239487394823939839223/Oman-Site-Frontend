@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { adminApi } from "@/services/adminApi";
 import ConfirmModal from "@/components/admin/ConfirmModal";
 import { getFriendlyError } from "@/lib/errors";
-import { FaPlus, FaTimes, FaEdit, FaTrashAlt, FaTicketAlt, FaPercent } from "react-icons/fa";
+import { FaPlus, FaTimes, FaEdit, FaTrashAlt, FaTicketAlt, FaPercent, FaUsers } from "react-icons/fa";
 
 type Ref = string | { _id: string; name?: string; title?: string };
 
@@ -13,6 +13,8 @@ interface Coupon {
   name: string;
   discount: number;
   expire: string;
+  usageLimit?: number | null;
+  usedCount?: number;
   product?: Ref;
   category?: Ref;
   createdAt?: string;
@@ -46,7 +48,7 @@ function formatDate(iso?: string): string {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-const emptyForm = { name: "", discount: "", expire: "", scope: "cart" as Scope, product: "", category: "" };
+const emptyForm = { name: "", discount: "", expire: "", usageLimit: "", scope: "cart" as Scope, product: "", category: "" };
 
 export default function CouponsManagementPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -96,6 +98,7 @@ export default function CouponsManagementPage() {
       name: coupon.name || "",
       discount: String(coupon.discount ?? ""),
       expire: toDateInputValue(coupon.expire),
+      usageLimit: coupon.usageLimit != null ? String(coupon.usageLimit) : "",
       scope: pid ? "product" : cid ? "category" : "cart",
       product: pid,
       category: cid,
@@ -118,6 +121,10 @@ export default function CouponsManagementPage() {
       return "Discount must be a number between 1 and 100 (percent).";
     if (!form.expire) return "Please choose an expiry date.";
     if (new Date(form.expire).getTime() <= Date.now()) return "Expiry date must be in the future.";
+    if (form.usageLimit) {
+      const limit = Number(form.usageLimit);
+      if (!Number.isInteger(limit) || limit < 1) return "Usage limit must be a whole number of at least 1.";
+    }
     if (form.scope === "product" && !form.product) return "Please choose which product this coupon applies to.";
     if (form.scope === "category" && !form.category) return "Please choose which category this coupon applies to.";
     return null;
@@ -130,12 +137,14 @@ export default function CouponsManagementPage() {
 
     // Backend stores the coupon name UPPERCASE; send it that way for consistency.
     const payload: {
-      name: string; discount: number; expire: string; product?: string; category?: string;
+      name: string; discount: number; expire: string; usageLimit: number | null; product?: string; category?: string;
     } = {
       name: form.name.trim().toUpperCase(),
       discount: Number(form.discount),
       // Send a full ISO-8601 datetime (end of the chosen day) so it validates as future.
       expire: new Date(`${form.expire}T23:59:59`).toISOString(),
+      // Blank = unlimited (null); otherwise the max number of people.
+      usageLimit: form.usageLimit ? Number(form.usageLimit) : null,
     };
     // Scope: attach product OR category id; a cart-wide coupon sends neither.
     if (form.scope === "product") payload.product = form.product;
@@ -347,6 +356,29 @@ export default function CouponsManagementPage() {
               <p className="text-xs text-gray-400 mt-1">The coupon stops working after this date.</p>
             </div>
 
+            {/* Usage limit — number of people */}
+            <div>
+              <label htmlFor="usageLimit" className="block text-sm font-bold text-gray-700 mb-1">
+                Usage Limit (number of people)
+              </label>
+              <div className="relative">
+                <FaUsers className="absolute top-1/2 -translate-y-1/2 left-3 text-gray-400 text-xs" />
+                <input
+                  id="usageLimit"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={form.usageLimit}
+                  onChange={(e) => setForm(f => ({ ...f, usageLimit: e.target.value }))}
+                  placeholder="Leave empty for unlimited"
+                  className={inputCls + " pl-10"}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                How many people can redeem this code. Each person can use it once. Leave empty for unlimited.
+              </p>
+            </div>
+
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="submit"
@@ -383,6 +415,7 @@ export default function CouponsManagementPage() {
                     <th className="px-6 py-3 font-black">Code</th>
                     <th className="px-6 py-3 font-black">Discount</th>
                     <th className="px-6 py-3 font-black">Applies To</th>
+                    <th className="px-6 py-3 font-black">Uses</th>
                     <th className="px-6 py-3 font-black">Expires</th>
                     <th className="px-6 py-3 font-black">Status</th>
                     <th className="px-6 py-3 font-black text-right">Actions</th>
@@ -392,6 +425,8 @@ export default function CouponsManagementPage() {
                   {coupons.map((c) => {
                     const expired = c.expire ? new Date(c.expire).getTime() <= Date.now() : false;
                     const scoped = !!(refId(c.product) || refId(c.category));
+                    const used = c.usedCount ?? 0;
+                    const usedUp = c.usageLimit != null && used >= c.usageLimit;
                     return (
                       <tr key={c._id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 font-black text-gray-900 tracking-wide">{c.name}</td>
@@ -405,10 +440,15 @@ export default function CouponsManagementPage() {
                             {scopeLabel(c)}
                           </span>
                         </td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">
+                          {used}{c.usageLimit != null ? ` / ${c.usageLimit}` : " / ∞"}
+                        </td>
                         <td className="px-6 py-4 text-gray-600 font-medium">{formatDate(c.expire)}</td>
                         <td className="px-6 py-4">
                           {expired ? (
                             <span className="bg-red-50 text-red-500 font-bold text-xs px-2.5 py-1 rounded-full">Expired</span>
+                          ) : usedUp ? (
+                            <span className="bg-red-50 text-red-500 font-bold text-xs px-2.5 py-1 rounded-full">Used up</span>
                           ) : (
                             <span className="bg-amber-50 text-amber-600 font-bold text-xs px-2.5 py-1 rounded-full">Active</span>
                           )}

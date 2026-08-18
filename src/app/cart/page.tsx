@@ -62,7 +62,11 @@ export default function CartPage() {
       setCouponInput("");
     } catch (error: any) {
       const msg: string = error?.message || "";
-      if (/expired/i.test(msg) || /انتهت/i.test(msg)) {
+      if (/already used/i.test(msg)) {
+        setCouponError(isArabic ? 'لقد استخدمت هذا الكوبون من قبل' : 'You have already used this coupon');
+      } else if (/usage limit|limit reached/i.test(msg)) {
+        setCouponError(isArabic ? 'انتهى عدد مرات استخدام هذا الكوبون' : 'This coupon has reached its usage limit');
+      } else if (/expired/i.test(msg) || /انتهت/i.test(msg)) {
         setCouponError(isArabic ? 'هذا الكوبون منتهي الصلاحية' : 'This coupon has expired');
       } else if (/not found|invalid/i.test(msg)) {
         setCouponError(isArabic ? 'كود الخصم غير صحيح أو غير موجود' : 'Invalid or unknown coupon code');
