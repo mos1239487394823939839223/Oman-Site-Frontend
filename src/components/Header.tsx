@@ -13,10 +13,8 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./LanguageSwitcher";
 import Link from "next/link";
 import Image from "next/image";
-import { Badge, IconButton, Tooltip } from "@mui/material";
 import { loadNavItems, NavItem, DEFAULT_NAV_ITEMS } from "@/lib/navbarConfig";
 import { useLanguage } from "./LanguageProvider";
-import CartDrawer from "@/components/mui/CartDrawer";
 
 // Icon map for dynamic icons
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -42,7 +40,6 @@ export default function Header() {
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV_ITEMS);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Load from localStorage (dynamic config from admin dashboard)
@@ -138,23 +135,6 @@ export default function Header() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-4">
-          <Tooltip title={t("cart.title")}>
-            <IconButton
-              aria-label={t("cart.title")}
-              onClick={() => setCartDrawerOpen(true)}
-              sx={{
-                color: "white",
-                bgcolor: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                "&:hover": { bgcolor: "rgba(255,255,255,0.16)" },
-              }}
-            >
-              <Badge badgeContent={cartCount} color="secondary" max={99}>
-                <FaShoppingCart size={17} />
-              </Badge>
-            </IconButton>
-          </Tooltip>
-
           {/* User Dropdown */}
           <div ref={userMenuRef} className="relative group">
             <button 
@@ -274,8 +254,6 @@ export default function Header() {
           </div>
         </div>
       )}
-
-      <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
     </nav>
   );
 }
