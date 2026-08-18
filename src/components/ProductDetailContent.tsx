@@ -244,6 +244,7 @@ export default function ProductDetailContent({ productId, isGift = false }: Prod
               alt={product.title}
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"
+              quality={100}
               className="object-contain p-8 transition-transform duration-700 group-hover:scale-105"
               priority
             />

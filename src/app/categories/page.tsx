@@ -122,7 +122,7 @@ export default function GiftsPage() {
                     alt={gift.title}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    quality={90}
+                    quality={100}
                     className="object-contain transition-transform duration-700 group-hover:scale-110"
                     loading="lazy"
                     onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}

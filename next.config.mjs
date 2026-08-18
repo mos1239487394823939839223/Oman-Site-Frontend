@@ -6,7 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Internal address of the backend used for server-side rewrites (uploads proxy,
 // x-api-request proxy). In Docker this is the compose service name; locally it
 // falls back to localhost:8000.
-const BACKEND_URL = process.env.BACKEND_URL;
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -57,6 +57,10 @@ const nextConfig = {
     };
   },
   images: {
+    // Allow the high-quality values we request via the <Image quality> prop.
+    // Next.js only honors qualities listed here (default is [75]).
+    qualities: [75, 90, 100],
+
     // Legacy domains list (kept for compatibility)
     domains: [
       'images.unsplash.com',
