@@ -77,7 +77,9 @@ async function apiRequest(path: string, options: RequestInit = {}): Promise<any>
 export const adminApi = {
   // ─── Products ──────────────────────────────────────────────────────────────
   getAllProducts: (params?: Record<string, string>) => {
-    const query = params ? "?" + new URLSearchParams(params).toString() : "";
+    // Default to a high limit so admin tables show every row (backend paginates
+    // to 5 by default). Callers can still override `limit` explicitly.
+    const query = "?" + new URLSearchParams({ limit: "1000", ...params }).toString();
     return apiRequest(`/products${query}`);
   },
   getProduct: (id: string) => apiRequest(`/products/${id}`),
@@ -96,7 +98,8 @@ export const adminApi = {
 
   // ─── Gifts (same shape as products; price forced to 0 on backend) ──────────
   getAllGifts: (params?: Record<string, string>) => {
-    const query = params ? "?" + new URLSearchParams(params).toString() : "";
+    // Default to a high limit so admin tables show every row.
+    const query = "?" + new URLSearchParams({ limit: "1000", ...params }).toString();
     return apiRequest(`/gifts${query}`);
   },
   getGift: (id: string) => apiRequest(`/gifts/${id}`),
@@ -130,7 +133,7 @@ export const adminApi = {
     apiRequest(`/categories/${id}`, { method: "DELETE" }),
 
   // Services (home page highlights) — JSON only, icon is an emoji string
-  getAllServices: () => apiRequest("/services"),
+  getAllServices: () => apiRequest("/services?limit=1000"),
   createService: (data: Record<string, unknown>) =>
     apiRequest("/services", { method: "POST", body: JSON.stringify(data) }),
   updateService: (id: string, data: Record<string, unknown>) =>
@@ -178,7 +181,7 @@ export const adminApi = {
     apiRequest(`/brands/${id}`, { method: "DELETE" }),
 
   // ─── Banners ───────────────────────────────────────────────────────────────
-  getAllBanners: () => apiRequest("/banners"),
+  getAllBanners: () => apiRequest("/banners?limit=1000"),
   getBanner: (id: string) => apiRequest(`/banners/${id}`),
   createBanner: (data: FormData) =>
     apiRequest("/banners", { method: "POST", body: data }),
@@ -193,7 +196,7 @@ export const adminApi = {
     apiRequest(`/banners/${id}/image`, { method: "POST", body: data }),
 
   // ─── Users ─────────────────────────────────────────────────────────────────
-  getAllUsers: () => apiRequest("/users"),
+  getAllUsers: () => apiRequest("/users?limit=1000"),
   getUser: (id: string) => apiRequest(`/users/${id}`),
   createUser: (data: FormData | Record<string, any>) =>
     apiRequest("/users", {
@@ -218,12 +221,14 @@ export const adminApi = {
     }),
 
   // ─── Coupons ───────────────────────────────────────────────────────────────
-  getAllCoupons: () => apiRequest("/coupons"),
+  getAllCoupons: () => apiRequest("/coupons?limit=1000"),
   getCoupon: (id: string) => apiRequest(`/coupons/${id}`),
   createCoupon: (data: {
     name: string;
     expire: string;
     discount: number;
+    // Max number of people who can redeem it; omit/null for unlimited.
+    usageLimit?: number | null;
     // Optional scope — omit both for a cart-wide coupon.
     product?: string;
     category?: string;
@@ -238,7 +243,7 @@ export const adminApi = {
     apiRequest(`/coupons/${id}`, { method: "DELETE" }),
 
   // ─── Orders ────────────────────────────────────────────────────────────────
-  getAllOrders: () => apiRequest("/orders"),
+  getAllOrders: () => apiRequest("/orders?limit=1000"),
   getOrder: (id: string) => apiRequest(`/orders/${id}`),
   // Optional: server-provided status options ({ value, labelEn, labelAr }).
   getOrderStatuses: () => apiRequest("/orders/statuses"),
@@ -250,7 +255,7 @@ export const adminApi = {
     }),
 
   // ─── Reviews (admin moderation) ────────────────────────────────────────────
-  getAllReviews: () => apiRequest("/reviews"),
+  getAllReviews: () => apiRequest("/reviews?limit=1000"),
   getReview: (id: string) => apiRequest(`/reviews/${id}`),
   deleteReview: (id: string) =>
     apiRequest(`/reviews/${id}`, { method: "DELETE" }),
