@@ -6,9 +6,16 @@ import { useAuth } from "@/components/AuthProvider";
 import { useTranslation } from "react-i18next";
 import { FaShoppingBag, FaCalendarAlt, FaCreditCard, FaCheckCircle, FaHourglassHalf, FaTruck } from "react-icons/fa";
 import { formatPrice, CurrencyCode } from "@/lib/currency";
+import { getMyOrders } from "@/services/clientApi";
+import { resolveMediaUrl } from "@/lib/media";
 
 interface OrderItem {
   product?: {
+    _id: string;
+    title: string;
+    imageCover?: string;
+  };
+  gift?: {
     _id: string;
     title: string;
     imageCover?: string;
@@ -56,43 +63,18 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const response = await fetch('https://ecommerce.routemisr.com/api/v1/orders/user', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setOrders(data.data || []);
-            return;
-          }
-        } catch (apiError) {
-          console.warn('API not available, using mock data:', apiError);
-        }
+      if (!token) {
+        setOrders([]);
+        return;
       }
-      
-      // Fallback to mock orders if API is not available
-      const mockOrders: Order[] = [
-        {
-          _id: `order_${Date.now()}`,
-          date: new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
-          total: 120,
-          isPaid: true,
-          isDelivered: false,
-          paymentMethod: 'card',
-          items: [
-            { name: isAr ? 'مصر ترمة كشميري فاخر' : 'Luxury Kashmiri Mussar', quantity: 1, price: 85 },
-            { name: isAr ? 'شال صوف عماني' : 'Omani Woolen Shal', quantity: 1, price: 35 }
-          ]
-        }
-      ];
-      
-      setOrders(mockOrders);
+      // Our own backend, filtered server-side to the logged-in user's orders.
+      const data = await getMyOrders(token);
+      const list: Order[] = data?.data || [];
+      // Newest first.
+      list.sort((a, b) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+      setOrders(list);
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrders([]);
@@ -226,8 +208,12 @@ export default function OrdersPage() {
                     <h4 className="font-black text-gray-800 text-sm mb-4">{isAr ? 'المنتجات المطلوبة' : 'Items Ordered'}</h4>
                     <div className="space-y-3">
                       {itemsList.map((item, index) => {
-                        const productTitle = item.product?.title || item.name || (isAr ? 'منتج تقليدي' : 'Traditional Product');
-                        const productImg = item.product?.imageCover || '/placeholder.svg';
+                        const isGift = !!item.gift;
+                        const productTitle = item.product?.title || item.gift?.title || item.name || (isAr ? 'منتج تقليدي' : 'Traditional Product');
+                        const rawImg = item.product?.imageCover || item.gift?.imageCover;
+                        const productImg = rawImg
+                          ? resolveMediaUrl(rawImg, isGift ? "gifts" : "products")
+                          : '/placeholder.svg';
                         const itemQty = item.count || item.quantity || 1;
                         const itemPrice = item.price || 0;
 

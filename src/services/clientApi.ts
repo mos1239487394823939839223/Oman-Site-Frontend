@@ -738,6 +738,20 @@ export async function getUserOrders(userId: string, token: string) {
 }
 
 /**
+ * Fetch the logged-in user's own orders from our backend.
+ * `GET /orders` is filtered server-side to the authenticated user (role "user"),
+ * so this returns only their orders. Returns the raw `{ data: [...] }` payload.
+ */
+export async function getMyOrders(token: string) {
+  // High limit so all the user's orders show (backend paginates to 5 by default).
+  const res = await fetch(`${API_BASE}/orders?limit=1000`, {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to fetch your orders");
+  return res.json();
+}
+
+/**
  * Create a Stripe checkout session for the card-payment flow.
  * Backend: `GET /orders/checkout-session/:cartId` → `{ session: { url, ... } }`.
  * Returns the raw `{ session }` payload; caller redirects to `session.url`.
