@@ -39,7 +39,7 @@ import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { useAppSnackbar } from "@/components/mui/AppSnackbarProvider";
-import { createCashOrder, createCheckoutSession, getCart } from "@/services/clientApi";
+import { createCashOrder, createThawaniSession, getCart } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
 
 type CheckoutFormValues = {
@@ -198,8 +198,8 @@ export default function CheckoutPage() {
       };
 
       if (values.paymentMethod === "card") {
-        const session = await createCheckoutSession(cartId, token);
-        const url = session?.session?.url;
+        const session = await createThawaniSession(cartId, { shippingAddress }, token);
+        const url = session?.payUrl;
         if (!url) {
           throw new Error("Could not start the secure payment session.");
         }

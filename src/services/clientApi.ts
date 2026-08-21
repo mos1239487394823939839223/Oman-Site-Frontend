@@ -763,6 +763,58 @@ export async function createCheckoutSession(cartId: string, token: string) {
   }
 }
 
+/**
+ * Start a Thawani card payment for a cart.
+ * Backend: `POST /orders/thawani/session/:cartId` → `{ session_id, payUrl }`.
+ * The caller redirects the browser to `payUrl`. The shipping address is passed
+ * so the order can be created (with it) once payment is confirmed.
+ */
+export async function createThawaniSession(
+  cartId: string,
+  data: { shippingAddress?: any },
+  token: string
+) {
+  const res = await fetch(`${API_BASE}/orders/thawani/session/${cartId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      shippingAddress: toBackendShippingAddress(data?.shippingAddress),
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({} as any));
+    throw new Error(err?.message || "Failed to start the online payment session.");
+  }
+  return readJsonSafe(res);
+}
+
+/**
+ * Confirm a Thawani payment after the customer returns to the success page.
+ * Backend: `POST /orders/thawani/confirm` → `{ paid, data: <order> }`.
+ * Pass the `ref` (cart id) carried in the success URL, or a `session_id`.
+ */
+export async function confirmThawaniPayment(
+  payload: { ref?: string; session_id?: string },
+  token: string
+) {
+  const res = await fetch(`${API_BASE}/orders/thawani/confirm`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({} as any));
+    throw new Error(err?.message || "Failed to confirm the payment.");
+  }
+  return readJsonSafe(res);
+}
+
 // Visa Card Payment API
 export async function createVisaOrder(cartId: string, paymentData: {
   shippingAddress: {

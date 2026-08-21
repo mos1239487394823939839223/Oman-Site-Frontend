@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { FaTrashAlt, FaPlus, FaMinus, FaArrowLeft, FaShoppingCart, FaCity, FaPhoneAlt, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaTruck, FaBoxOpen, FaGift, FaShieldAlt, FaCheck, FaCheckCircle, FaHome } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
-import { createCashOrder, createCheckoutSession, getCart } from "@/services/clientApi";
+import { createCashOrder, createThawaniSession, getCart } from "@/services/clientApi";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { priceForCurrency } from "@/lib/currency";
@@ -121,9 +121,9 @@ export default function CartPage() {
         return;
       }
 
-      // Card payment → redirect to the Stripe-hosted checkout session
-      const session = await createCheckoutSession(cartId, token);
-      const url = session?.session?.url;
+      // Card payment → redirect to the Thawani-hosted checkout session
+      const session = await createThawaniSession(cartId, { shippingAddress }, token);
+      const url = session?.payUrl;
       if (url) {
         window.location.href = url;
         return;

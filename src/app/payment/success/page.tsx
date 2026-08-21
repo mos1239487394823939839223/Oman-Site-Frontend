@@ -4,18 +4,65 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { FaCheckCircle, FaShoppingBag, FaHistory, FaEnvelope, FaWhatsapp } from "react-icons/fa";
 import styles from "./PaymentSuccess.module.css";
+import { confirmThawaniPayment } from "@/services/clientApi";
+import { useCart } from "@/components/CartProvider";
 
 function PaymentSuccessPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { clearCart, refreshCart } = useCart();
   const [orderId, setOrderId] = useState("");
+  // While we verify a Thawani payment on return from the hosted page.
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     const orderIdParam = searchParams.get('orderId');
     if (orderIdParam) {
       setOrderId(orderIdParam);
+      return;
     }
-  }, [searchParams]);
+
+    // Returning from Thawani: ?ref=<cartId>. Verify the payment and, if paid,
+    // the backend places the order and returns it.
+    const ref = searchParams.get('ref');
+    if (!ref) return;
+
+    const token = typeof window !== "undefined" ? localStorage.getItem('token') : null;
+    if (!token) return;
+
+    let cancelled = false;
+    (async () => {
+      setConfirming(true);
+      try {
+        const result = await confirmThawaniPayment({ ref }, token);
+        if (cancelled) return;
+        if (result?.paid) {
+          const order = result?.data;
+          if (order?._id) setOrderId(`#${String(order._id).slice(-8).toUpperCase()}`);
+          // The server consumed the cart; reflect that on the client.
+          try { await clearCart(); } catch { await refreshCart?.(); }
+        } else {
+          // Payment not completed — send the shopper back to their cart.
+          router.replace('/payment/cancel');
+        }
+      } catch {
+        // Leave the generic thank-you in place if verification errored.
+      } finally {
+        if (!cancelled) setConfirming(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [searchParams, router, clearCart, refreshCart]);
+
+  if (confirming) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5a1832]"></div>
+        <p className="text-[#5a1832] font-bold">جارٍ تأكيد الدفع…</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
