@@ -38,6 +38,7 @@ interface Order {
   totalOrderPrice: number;
   taxPrice?: number;
   shippingPrice?: number;
+  wrappingPrice?: number;
   currency?: string;
   status?: string;
   orderStatus?: string;
@@ -203,6 +204,7 @@ export default function OrderDetailsModal({
       totalPrice: formatPrice(order.totalOrderPrice, cur),
       taxPrice: typeof order.taxPrice === "number" ? formatPrice(order.taxPrice, cur) : "",
       shippingPrice: typeof order.shippingPrice === "number" ? formatPrice(order.shippingPrice, cur) : "",
+      wrappingPrice: typeof order.wrappingPrice === "number" && order.wrappingPrice > 0 ? formatPrice(order.wrappingPrice, cur) : "",
       status: status.label,
       isPaid: order.isPaid,
       isDelivered: order.isDelivered,
@@ -331,6 +333,9 @@ export default function OrderDetailsModal({
                 )}
                 {detailValues.shippingPrice && (
                   <DetailCard label="الشحن" value={detailValues.shippingPrice} icon={<FaTruck />} />
+                )}
+                {detailValues.wrappingPrice && (
+                  <DetailCard label="تغليف الهدية" value={detailValues.wrappingPrice} icon={<FaTag />} />
                 )}
                 <DetailCard label="الحالة" value={detailValues.status} icon={<FaTag />} />
                 <DetailCard label="حالة الدفع" value={detailValues.isPaid ? "مدفوع" : "غير مدفوع"} icon={<FaCreditCard />} />

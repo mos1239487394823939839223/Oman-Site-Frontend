@@ -700,9 +700,18 @@ export function toBackendShippingAddress(sa: any = {}): {
   };
 }
 
+interface OrderCharges {
+  shippingAddress?: any;
+  deliveryMethod?: "delivery" | "pickup";
+  // Add-on fees the customer sees, so the backend charges the full total.
+  taxPrice?: number;
+  shippingPrice?: number;
+  wrappingPrice?: number;
+}
+
 export async function createCashOrder(
   cartId: string,
-  data: { shippingAddress?: any },
+  data: OrderCharges,
   token: string
 ) {
   const res = await fetch(`${API_BASE}/orders/${cartId}`, {
@@ -713,6 +722,10 @@ export async function createCashOrder(
     },
     body: JSON.stringify({
       shippingAddress: toBackendShippingAddress(data?.shippingAddress),
+      deliveryMethod: data?.deliveryMethod,
+      taxPrice: data?.taxPrice,
+      shippingPrice: data?.shippingPrice,
+      wrappingPrice: data?.wrappingPrice,
     }),
   });
   if (!res.ok) throw new Error("Failed to create cash order");
@@ -785,7 +798,7 @@ export async function createCheckoutSession(cartId: string, token: string) {
  */
 export async function createThawaniSession(
   cartId: string,
-  data: { shippingAddress?: any },
+  data: OrderCharges,
   token: string
 ) {
   const res = await fetch(`${API_BASE}/orders/thawani/session/${cartId}`, {
@@ -796,6 +809,10 @@ export async function createThawaniSession(
     },
     body: JSON.stringify({
       shippingAddress: toBackendShippingAddress(data?.shippingAddress),
+      deliveryMethod: data?.deliveryMethod,
+      taxPrice: data?.taxPrice,
+      shippingPrice: data?.shippingPrice,
+      wrappingPrice: data?.wrappingPrice,
     }),
   });
   if (!res.ok) {

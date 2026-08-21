@@ -113,8 +113,17 @@ export default function CartPage() {
         throw new Error(isArabic ? 'تعذّر الوصول إلى سلتك، حدّث الصفحة وحاول مجدداً' : 'Could not access your cart. Please refresh and try again.');
       }
 
+      // Fees the customer sees, so the order total (and card charge) matches.
+      const charges = {
+        shippingAddress,
+        deliveryMethod,
+        taxPrice: taxAmount,
+        shippingPrice: shippingFee,
+        wrappingPrice: wrappingFee,
+      };
+
       if (paymentMethod === 'cash') {
-        await createCashOrder(cartId, { shippingAddress }, token);
+        await createCashOrder(cartId, charges, token);
         setSavedTotal(finalTotal);
         await clearCart();
         setStep('success');
@@ -122,7 +131,7 @@ export default function CartPage() {
       }
 
       // Card payment → redirect to the Thawani-hosted checkout session
-      const session = await createThawaniSession(cartId, { shippingAddress }, token);
+      const session = await createThawaniSession(cartId, charges, token);
       const url = session?.payUrl;
       if (url) {
         window.location.href = url;
