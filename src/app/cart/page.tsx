@@ -24,7 +24,7 @@ export default function CartPage() {
   const [step, setStep] = useState<Step>('cart');
   const [savedTotal, setSavedTotal] = useState(0);
   const [shippingAddress, setShippingAddress] = useState({ details: "", phone: "", city: "", postalCode: "", name: "", country: "Oman" });
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [needsWrapping, setNeedsWrapping] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
