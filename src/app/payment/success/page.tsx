@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { FaCheckCircle, FaShoppingBag, FaHistory, FaEnvelope, FaWhatsapp } from "react-icons/fa";
 import styles from "./PaymentSuccess.module.css";
 import { confirmThawaniPayment } from "@/services/clientApi";
@@ -14,10 +14,16 @@ function PaymentSuccessPageContent() {
   const [orderId, setOrderId] = useState("");
   // While we verify a Thawani payment on return from the hosted page.
   const [confirming, setConfirming] = useState(false);
+  // Confirm exactly once. clearCart isn't a stable reference, so listing it as
+  // an effect dependency would re-run this and loop (clear → re-render → re-run).
+  const startedRef = useRef(false);
 
   useEffect(() => {
+    if (startedRef.current) return;
+
     const orderIdParam = searchParams.get('orderId');
     if (orderIdParam) {
+      startedRef.current = true;
       setOrderId(orderIdParam);
       return;
     }
@@ -30,12 +36,11 @@ function PaymentSuccessPageContent() {
     const token = typeof window !== "undefined" ? localStorage.getItem('token') : null;
     if (!token) return;
 
-    let cancelled = false;
+    startedRef.current = true;
     (async () => {
       setConfirming(true);
       try {
         const result = await confirmThawaniPayment({ ref }, token);
-        if (cancelled) return;
         if (result?.paid) {
           const order = result?.data;
           if (order?._id) setOrderId(`#${String(order._id).slice(-8).toUpperCase()}`);
@@ -48,12 +53,12 @@ function PaymentSuccessPageContent() {
       } catch {
         // Leave the generic thank-you in place if verification errored.
       } finally {
-        if (!cancelled) setConfirming(false);
+        setConfirming(false);
       }
     })();
-
-    return () => { cancelled = true; };
-  }, [searchParams, router, clearCart, refreshCart]);
+    // Intentionally run once on mount; guarded by startedRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   if (confirming) {
     return (
