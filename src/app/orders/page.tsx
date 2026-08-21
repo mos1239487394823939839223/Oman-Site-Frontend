@@ -170,32 +170,36 @@ export default function OrdersPage() {
                       <h3 className="text-lg font-black text-gray-800">#{orderId.slice(-8).toUpperCase()}</h3>
                     </div>
                     
-                    <div className="flex flex-wrap gap-2">
-                      {order.isPaid ? (
-                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-50 text-amber-600 border border-amber-100">
-                          <FaCheckCircle className="w-3.5 h-3.5" />
-                          {isAr ? 'مدفوع' : 'Paid'}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-50 text-amber-600 border border-amber-100">
-                          <FaHourglassHalf className="w-3.5 h-3.5" />
-                          {isAr ? 'قيد الانتظار' : 'Pending Payment'}
-                        </span>
-                      )}
+                    {(() => {
+                      // Prefer the admin-set status; fall back to the flags for old orders.
+                      const statusKey = (order.status || order.orderStatus ||
+                        (order.isDelivered ? 'delivered' : order.isPaid ? 'processing' : 'pending')).toLowerCase();
+                      const isDelivered = order.isDelivered || statusKey === 'delivered' || statusKey === 'completed';
+                      const s = getStatusInfo(statusKey, isAr);
+                      return (
+                        <div className="flex flex-wrap gap-2">
+                          {order.isPaid ? (
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-50 text-amber-600 border border-amber-100">
+                              <FaCheckCircle className="w-3.5 h-3.5" />
+                              {isAr ? 'مدفوع' : 'Paid'}
+                            </span>
+                          ) : (
+                            // Once delivered, don't show the "pending payment" badge — it's contradictory.
+                            !isDelivered && (
+                              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-50 text-amber-600 border border-amber-100">
+                                <FaHourglassHalf className="w-3.5 h-3.5" />
+                                {isAr ? 'قيد الانتظار' : 'Pending Payment'}
+                              </span>
+                            )
+                          )}
 
-                      {(() => {
-                        // Prefer the admin-set status; fall back to the flags for old orders.
-                        const statusKey = (order.status || order.orderStatus ||
-                          (order.isDelivered ? 'delivered' : order.isPaid ? 'processing' : 'pending')).toLowerCase();
-                        const s = getStatusInfo(statusKey, isAr);
-                        return (
                           <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black border ${s.classes}`}>
                             {s.icon}
                             {s.label}
                           </span>
-                        );
-                      })()}
-                    </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Metadata Row */}
