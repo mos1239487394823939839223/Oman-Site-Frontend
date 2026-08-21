@@ -4,10 +4,26 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { useTranslation } from "react-i18next";
-import { FaShoppingBag, FaCalendarAlt, FaCreditCard, FaCheckCircle, FaHourglassHalf, FaTruck } from "react-icons/fa";
+import { FaShoppingBag, FaCalendarAlt, FaCreditCard, FaCheckCircle, FaHourglassHalf, FaTruck, FaClock, FaTimesCircle, FaBoxOpen } from "react-icons/fa";
 import { formatPrice, CurrencyCode } from "@/lib/currency";
 import { getMyOrders } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
+
+/** Fulfilment status badge (mirrors the admin order statuses) so a customer
+ *  sees the same status the admin sets (confirmed / processing / shipped / …). */
+function getStatusInfo(status: string, isAr: boolean) {
+  const map: Record<string, { ar: string; en: string; classes: string; icon: React.ReactNode }> = {
+    pending:    { ar: 'قيد الانتظار', en: 'Pending',    classes: 'bg-amber-50 text-amber-600 border-amber-100',   icon: <FaClock className="w-3.5 h-3.5" /> },
+    confirmed:  { ar: 'مؤكد',         en: 'Confirmed',  classes: 'bg-[#5C2E3A]/10 text-[#5C2E3A] border-[#5C2E3A]/15', icon: <FaCheckCircle className="w-3.5 h-3.5" /> },
+    processing: { ar: 'جاري التجهيز', en: 'Processing', classes: 'bg-sky-50 text-sky-600 border-sky-100',         icon: <FaBoxOpen className="w-3.5 h-3.5" /> },
+    shipped:    { ar: 'تم الشحن',     en: 'Shipped',    classes: 'bg-indigo-50 text-indigo-600 border-indigo-100', icon: <FaTruck className="w-3.5 h-3.5" /> },
+    delivered:  { ar: 'تم التسليم',   en: 'Delivered',  classes: 'bg-green-50 text-green-600 border-green-100',    icon: <FaCheckCircle className="w-3.5 h-3.5" /> },
+    completed:  { ar: 'مكتمل',        en: 'Completed',  classes: 'bg-green-50 text-green-600 border-green-100',    icon: <FaCheckCircle className="w-3.5 h-3.5" /> },
+    cancelled:  { ar: 'ملغي',         en: 'Cancelled',  classes: 'bg-red-50 text-red-500 border-red-100',          icon: <FaTimesCircle className="w-3.5 h-3.5" /> },
+  };
+  const cfg = map[status?.toLowerCase()] || { ar: status, en: status, classes: 'bg-gray-50 text-gray-500 border-gray-100', icon: <FaHourglassHalf className="w-3.5 h-3.5" /> };
+  return { label: isAr ? cfg.ar : cfg.en, classes: cfg.classes, icon: cfg.icon };
+}
 
 interface OrderItem {
   product?: {
@@ -36,6 +52,8 @@ interface Order {
   currency?: string;
   paymentMethodType?: string;
   paymentMethod?: string;
+  status?: string;
+  orderStatus?: string;
   isPaid?: boolean;
   isDelivered?: boolean;
   cartItems?: OrderItem[];
@@ -165,17 +183,18 @@ export default function OrdersPage() {
                         </span>
                       )}
 
-                      {order.isDelivered ? (
-                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-blue-50 text-blue-600 border border-blue-100">
-                          <FaTruck className="w-3.5 h-3.5" />
-                          {isAr ? 'تم التوصيل' : 'Delivered'}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gray-50 text-gray-500 border border-gray-100">
-                          <FaHourglassHalf className="w-3.5 h-3.5" />
-                          {isAr ? 'جاري التجهيز' : 'Processing'}
-                        </span>
-                      )}
+                      {(() => {
+                        // Prefer the admin-set status; fall back to the flags for old orders.
+                        const statusKey = (order.status || order.orderStatus ||
+                          (order.isDelivered ? 'delivered' : order.isPaid ? 'processing' : 'pending')).toLowerCase();
+                        const s = getStatusInfo(statusKey, isAr);
+                        return (
+                          <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black border ${s.classes}`}>
+                            {s.icon}
+                            {s.label}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
 
