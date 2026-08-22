@@ -29,10 +29,15 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === "ar";
   const { currency, format } = useCurrency();
   const [imgSrc, setImgSrc] = useState(resolveMediaUrl(product.imageCover, "products"));
   const [imageLoading, setImageLoading] = useState(true);
+
+  // Stock availability shown on the card.
+  const availableQty = typeof product.quantity === "number" ? product.quantity : 0;
+  const outOfStock = availableQty <= 0;
 
   const handleViewDetails = () => {
     router.push(`/products/${product._id}`);
@@ -127,6 +132,30 @@ export default function ProductCard({ product }: ProductCardProps) {
             size="sm"
           />
         </Box>
+
+        {outOfStock && (
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "rgba(255,255,255,0.55)",
+            }}
+          >
+            <Chip
+              label={isAr ? "نفذت الكمية" : "Out of stock"}
+              sx={{
+                fontWeight: 800,
+                bgcolor: "error.main",
+                color: "#fff",
+                "& .MuiChip-label": { color: "#fff" },
+              }}
+            />
+          </Box>
+        )}
       </Box>
 
       <CardContent sx={{ display: "flex", flexDirection: "column", flex: 1, p: 2, gap: 1 }}>
@@ -204,6 +233,17 @@ export default function ProductCard({ product }: ProductCardProps) {
             </Typography>
           )}
         </Stack>
+
+        <Box sx={{ minHeight: 20, display: "flex", alignItems: "center" }}>
+          <Typography
+            variant="caption"
+            sx={{ fontWeight: 700, color: outOfStock ? "error.main" : "success.main" }}
+          >
+            {outOfStock
+              ? (isAr ? "نفذت الكمية" : "Out of stock")
+              : (isAr ? `الكمية المتاحة: ${availableQty}` : `In stock: ${availableQty}`)}
+          </Typography>
+        </Box>
 
         <Box sx={{ mt: "auto", pt: 1 }}>
           <Button

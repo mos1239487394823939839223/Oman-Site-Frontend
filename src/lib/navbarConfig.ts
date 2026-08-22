@@ -21,6 +21,7 @@ export const DEFAULT_NAV_ITEMS: NavItem[] = [
   { key: "reviews",   labelKey: "header.reviews",   labelEn: "Reviews",    labelAr: "التقييمات",href: "/reviews",    icon: "FaStar",         visible: true, order: 4 },
   { key: "favorites", labelKey: "header.favorites", labelEn: "Favorites",  labelAr: "المفضلة",  href: "/wishlist",   icon: "FaHeart",        visible: true, order: 5 },
   { key: "cart",      labelKey: "header.cart",      labelEn: "Cart",       labelAr: "السلة",    href: "/cart",       icon: "FaShoppingCart", visible: true, order: 6, showBadge: true },
+  { key: "orders",    labelKey: "header.orders",    labelEn: "My Orders",  labelAr: "طلباتي",   href: "/orders",     icon: "FaBox",          visible: true, order: 7 },
 ];
 
 export function loadNavItems(): NavItem[] {
