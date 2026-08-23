@@ -18,6 +18,10 @@ export default function SubcategoriesManagementPage() {
   const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
   const [deleteSubcategory, setDeleteSubcategory] = useState<Subcategory | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  // Bulk product discount for a subcategory.
+  const [discountTarget, setDiscountTarget] = useState<Subcategory | null>(null);
+  const [discountPercent, setDiscountPercent] = useState("");
+  const [discountLoading, setDiscountLoading] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -93,6 +97,37 @@ export default function SubcategoriesManagementPage() {
     setEditingSubcategory(null);
   };
 
+  const handleDiscount = (subcategory: Subcategory) => {
+    setDiscountTarget(subcategory);
+    setDiscountPercent("");
+  };
+
+  const confirmDiscount = async () => {
+    if (!discountTarget) return;
+    const pct = Number(discountPercent);
+    if (!Number.isFinite(pct) || pct < 0 || pct >= 100) {
+      toast.error("Invalid value", "Enter a percentage between 0 and 99 (0 clears the discount).");
+      return;
+    }
+    try {
+      setDiscountLoading(true);
+      const res = await adminApi.applySubcategoryDiscount(discountTarget._id, pct);
+      const count = res?.modified ?? 0;
+      toast.success(
+        pct === 0 ? "Discount cleared" : "Discount applied",
+        pct === 0
+          ? `Cleared discounts on ${count} product(s) in "${discountTarget.name}".`
+          : `${pct}% off applied to ${count} product(s) in "${discountTarget.name}".`
+      );
+      setDiscountTarget(null);
+      setDiscountPercent("");
+    } catch (error) {
+      toast.error("Failed", getFriendlyError(error, "Couldn't apply the discount. Please try again."));
+    } finally {
+      setDiscountLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -139,6 +174,7 @@ export default function SubcategoriesManagementPage() {
           loading={loading}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onDiscount={handleDiscount}
         />
       )}
 
@@ -151,6 +187,39 @@ export default function SubcategoriesManagementPage() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteSubcategory(null)}
         isDanger={true}
+      />
+
+      <ConfirmModal
+        isOpen={!!discountTarget}
+        title="Apply Discount to Subcategory"
+        message={
+          <div className="space-y-3">
+            <p className="text-gray-600 text-sm">
+              Apply a percentage discount to <span className="font-black text-[#5C2E3A]">all products</span> in{" "}
+              <span className="font-black text-[#5C2E3A]">{discountTarget?.name}</span>. It updates every currency price.
+            </p>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                max={99}
+                step={1}
+                value={discountPercent}
+                onChange={(e) => setDiscountPercent(e.target.value)}
+                placeholder="e.g. 20"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#5C2E3A]/30 focus:border-[#5C2E3A] outline-none font-bold text-gray-900 bg-white pr-10"
+              />
+              <span className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 font-bold">%</span>
+            </div>
+            <p className="text-xs text-gray-400">Enter 0 to remove any existing discount from this subcategory.</p>
+          </div>
+        }
+        confirmText={discountLoading ? "Applying..." : "Apply"}
+        cancelText="Cancel"
+        onConfirm={confirmDiscount}
+        onCancel={() => { setDiscountTarget(null); setDiscountPercent(""); }}
+        isDanger={false}
+        isLoading={discountLoading}
       />
     </>
   );

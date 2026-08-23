@@ -3,13 +3,14 @@
 import { Subcategory } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
 import DataTable, { Column } from "./DataTable";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash, FaPercent } from "react-icons/fa";
 
 interface SubcategoriesTableProps {
   subcategories: Subcategory[];
   loading?: boolean;
   onEdit?: (subcategory: Subcategory) => void;
   onDelete?: (subcategory: Subcategory) => void;
+  onDiscount?: (subcategory: Subcategory) => void;
 }
 
 export default function SubcategoriesTable({
@@ -17,6 +18,7 @@ export default function SubcategoriesTable({
   loading = false,
   onEdit,
   onDelete,
+  onDiscount,
 }: SubcategoriesTableProps) {
   const columns: Column<Subcategory>[] = [
     {
@@ -64,6 +66,18 @@ export default function SubcategoriesTable({
       header: "Actions",
       accessor: (row) => (
         <div className="flex items-center gap-2">
+          {onDiscount && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDiscount(row);
+              }}
+              className="p-2 text-[#D4AF37] hover:bg-[#D4AF37]/10 rounded-lg transition-colors"
+              title="Apply discount to all products"
+            >
+              <FaPercent className="w-4 h-4" />
+            </button>
+          )}
           {onEdit && (
             <button
               onClick={(e) => {
@@ -90,7 +104,7 @@ export default function SubcategoriesTable({
           )}
         </div>
       ),
-      className: "w-24",
+      className: "w-32",
     },
   ];
 

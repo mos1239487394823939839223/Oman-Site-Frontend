@@ -163,6 +163,12 @@ export const adminApi = {
     }),
   deleteSubcategory: (id: string) =>
     apiRequest(`/subcategories/${id}`, { method: "DELETE" }),
+  // Apply (percent > 0) or clear (0) a discount for all products in a subcategory.
+  applySubcategoryDiscount: (subCategoryId: string, discountPercent: number) =>
+    apiRequest(`/products/discount/subcategory/${subCategoryId}`, {
+      method: "PUT",
+      body: JSON.stringify({ discountPercent }),
+    }),
 
   // ─── Brands ────────────────────────────────────────────────────────────────
   getAllBrands: () => apiRequest("/brands?limit=1000"),
