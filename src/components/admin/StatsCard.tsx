@@ -48,20 +48,22 @@ export default function StatsCard({ title, value, icon, trend, subtitle, color =
   const c = colorMap[color];
 
   return (
-    <div className={`relative overflow-hidden bg-white border ${c.border} rounded-2xl p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md`}>
-      <div className="flex items-start justify-between">
+    <div className={`relative overflow-hidden bg-white border ${c.border} rounded-2xl p-6 shadow-[0_2px_10px_rgba(15,23,42,0.06)] ring-1 ring-black/[0.02] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(15,23,42,0.12)]`}>
+      {/* Left accent bar for stronger visual separation between cards */}
+      <span className={`absolute left-0 top-0 h-full w-1.5 ${c.accent}`} />
+      <div className="flex items-start justify-between gap-4 pl-2">
         <div className="flex-1">
-          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">{title}</p>
+          <p className="text-gray-500 text-xs font-black uppercase tracking-widest mb-2.5">{title}</p>
           <p className="text-gray-900 text-3xl font-black tracking-tight">{value}</p>
-          {subtitle && <p className="text-gray-400 text-xs mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-gray-500 text-xs mt-1.5">{subtitle}</p>}
           {trend && (
-            <div className={`flex items-center gap-1 mt-2 text-xs font-bold ${c.trend}`}>
+            <div className={`inline-flex items-center gap-1 mt-3 text-xs font-bold ${c.trend}`}>
               <span>{trend.isPositive ? "▲" : "▼"}</span>
               <span>{trend.value}% this month</span>
             </div>
           )}
         </div>
-        <div className={`w-12 h-12 ${c.icon} rounded-xl flex items-center justify-center flex-shrink-0`}>
+        <div className={`w-14 h-14 ${c.icon} rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm`}>
           {icon}
         </div>
       </div>

@@ -57,7 +57,7 @@ export default function DataTable<T extends { _id?: string }>({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -99,7 +99,7 @@ export default function DataTable<T extends { _id?: string }>({
                   key={row._id || JSON.stringify(row)}
                   onClick={() => onRowClick?.(row)}
                   className={`
-                    border-b border-gray-50 transition-colors
+                    border-b border-gray-100 transition-colors
                     ${rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'}
                     ${onRowClick ? 'cursor-pointer hover:bg-[#5C2E3A]/5' : 'hover:bg-gray-50'}
                   `}
