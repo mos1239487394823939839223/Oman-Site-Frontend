@@ -72,10 +72,10 @@ export default function SubcategoriesTable({
                 e.stopPropagation();
                 onDiscount(row);
               }}
-              className="p-2 text-[#D4AF37] hover:bg-[#D4AF37]/10 rounded-lg transition-colors"
-              title="Apply discount to all products"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#B8902F] bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 rounded-lg transition-colors whitespace-nowrap"
+              title="Apply a discount to all products in this subcategory"
             >
-              <FaPercent className="w-4 h-4" />
+              <FaPercent className="w-3 h-3" /> خصم
             </button>
           )}
           {onEdit && (
@@ -104,7 +104,7 @@ export default function SubcategoriesTable({
           )}
         </div>
       ),
-      className: "w-32",
+      className: "w-44",
     },
   ];
 
