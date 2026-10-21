@@ -38,6 +38,7 @@ import DiscountRoundedIcon from "@mui/icons-material/DiscountRounded";
 import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
+import { convertFromBase } from "@/lib/currency";
 import { useAppSnackbar } from "@/components/mui/AppSnackbarProvider";
 import { createCashOrder, createThawaniSession, getCart, getFooter } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
@@ -70,7 +71,7 @@ export default function CheckoutPage() {
     clearCart,
   } = useCart();
   const { isAuthenticated } = useAuth();
-  const { format } = useCurrency();
+  const { format, currency } = useCurrency();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -123,7 +124,9 @@ export default function CheckoutPage() {
       })
       .catch(() => {});
   }, []);
-  const finalTotal = useMemo(() => subtotal + shippingFee, [subtotal, shippingFee]);
+  // shippingFee is in OMR; show it in the active currency.
+  const shippingDisplay = convertFromBase(shippingFee, currency);
+  const finalTotal = useMemo(() => subtotal + shippingDisplay, [subtotal, shippingDisplay]);
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim().toUpperCase();
@@ -622,7 +625,7 @@ export default function CheckoutPage() {
 
                     <Stack direction="row" sx={{ justifyContent: "space-between" }}>
                       <Typography color="text.secondary">Shipping</Typography>
-                      <Typography sx={{ fontWeight: 700 }}>{shippingFee === 0 ? "Free" : format(shippingFee)}</Typography>
+                      <Typography sx={{ fontWeight: 700 }}>{shippingFee === 0 ? "Free" : format(shippingDisplay)}</Typography>
                     </Stack>
 
                     <Box sx={{ borderTop: "1px solid", borderColor: "divider", pt: 1.25 }}>

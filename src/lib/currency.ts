@@ -21,6 +21,23 @@ export const CURRENCIES: Record<CurrencyCode, CurrencyMeta> = {
   USD: { code: "USD", symbol: "$", label: "US Dollar", decimals: 2 },
 };
 
+// US dollars per one unit of each currency. All four are pegged to the USD
+// (OMR 0.3845, AED 3.6725, SAR 3.75 per dollar), so these rates are fixed.
+const USD_PER_UNIT: Record<CurrencyCode, number> = {
+  OMR: 1 / 0.3845,
+  AED: 1 / 3.6725,
+  SAR: 1 / 3.75,
+  USD: 1,
+};
+
+/**
+ * Convert a fixed OMR amount (delivery fee, gift wrapping) into `code` for
+ * display. Products don't use this — they carry their own per-currency prices.
+ */
+export function convertFromBase(amount: number, code: CurrencyCode): number {
+  return (amount * USD_PER_UNIT[BASE_CURRENCY]) / USD_PER_UNIT[code];
+}
+
 export const SUPPORTED_CURRENCIES: CurrencyCode[] = Object.keys(
   CURRENCIES
 ) as CurrencyCode[];

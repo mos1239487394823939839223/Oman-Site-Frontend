@@ -8,10 +8,13 @@ import { useTranslation } from "react-i18next";
 import { createCashOrder, createThawaniSession, getCart, getFooter } from "@/services/clientApi";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
-import { priceForCurrency } from "@/lib/currency";
+import { priceForCurrency, convertFromBase } from "@/lib/currency";
 import { resolveMediaUrl } from "@/lib/media";
 
 type Step = 'cart' | 'checkout' | 'success';
+
+// Gift-wrapping fee in OMR (the server charges the same).
+const WRAPPING_PRICE = 5;
 
 export default function CartPage() {
   const { cartItems, cartTotal, cartTotalAfterDiscount, appliedCoupon, applyCoupon, removeCoupon, updateCartItem, removeFromCart, clearCart, loading, refreshCart } = useCart();
@@ -52,8 +55,11 @@ export default function CartPage() {
       .catch(() => {});
   }, []);
 
-  const shippingFee = deliveryMethod === 'delivery' ? deliveryPrice : 0;
-  const wrappingFee = needsWrapping ? 5 : 0;
+  // Delivery and wrapping are fixed OMR fees; show them in the active currency.
+  const deliveryDisplay = convertFromBase(deliveryPrice, currency);
+  const wrappingDisplay = convertFromBase(WRAPPING_PRICE, currency);
+  const shippingFee = deliveryMethod === 'delivery' ? deliveryDisplay : 0;
+  const wrappingFee = needsWrapping ? wrappingDisplay : 0;
   // Use the coupon-discounted subtotal when a coupon is applied.
   const hasCoupon = typeof cartTotalAfterDiscount === 'number' && cartTotalAfterDiscount < cartTotal;
   const effectiveSubtotal = hasCoupon ? (cartTotalAfterDiscount as number) : cartTotal;
@@ -375,7 +381,7 @@ export default function CartPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div onClick={() => setDeliveryMethod('delivery')} className={sel(deliveryMethod === 'delivery')}>
                       <div className={iconBox(deliveryMethod === 'delivery')}><FaTruck size={16} /></div>
-                      <div><p className="font-black text-base">{t('cart.deliveryOptionDelivery')}</p><p className="text-sm text-[#D4AF37] font-bold">{format(deliveryPrice)}</p></div>
+                      <div><p className="font-black text-base">{t('cart.deliveryOptionDelivery')}</p><p className="text-sm text-[#D4AF37] font-bold">{format(deliveryDisplay)}</p></div>
                     </div>
                     <div onClick={() => setDeliveryMethod('pickup')} className={sel(deliveryMethod === 'pickup')}>
                       <div className={iconBox(deliveryMethod === 'pickup')}><FaBoxOpen size={16} /></div>
@@ -435,7 +441,7 @@ export default function CartPage() {
                   <p className="text-sm font-black text-[#5C2E3A] uppercase tracking-widest mb-1">{t('cart.additionalOptionsTitle')}</p>
                   <div onClick={() => setNeedsWrapping(!needsWrapping)} className={sel(needsWrapping) + (needsWrapping ? ' !border-[#D4AF37] !bg-[#D4AF37]/5' : '')}>
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${needsWrapping ? 'bg-[#D4AF37] text-white' : 'bg-gray-100 text-gray-400'}`}><FaGift size={16} /></div>
-                    <div className="flex-1"><p className="font-black text-base">{t('cart.wrappingLabel')}</p><p className="text-sm text-gray-500">+{format(wrappingFee)}</p></div>
+                    <div className="flex-1"><p className="font-black text-base">{t('cart.wrappingLabel')}</p><p className="text-sm text-gray-500">+{format(wrappingDisplay)}</p></div>
                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${needsWrapping ? 'bg-[#D4AF37] border-[#D4AF37]' : 'border-gray-300'}`}>{needsWrapping && <FaCheck className="text-white" size={8} />}</div>
                   </div>
                 </div>
