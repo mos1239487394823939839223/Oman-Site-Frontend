@@ -8,6 +8,7 @@ import {
   updateCartItem as updateCartItemAPI,
   clearCart as clearCartAPI,
   applyCoupon as applyCouponAPI,
+  removeCoupon as removeCouponAPI,
   CartItem,
 } from '@/services/clientApi';
 import { useAuth } from '@/components/AuthProvider';
@@ -36,7 +37,7 @@ interface CartContextType {
   updateCartItem: (itemId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
   applyCoupon: (coupon: string) => Promise<{ discount: number }>;
-  removeCoupon: () => void;
+  removeCoupon: () => Promise<void>;
   refreshCart: () => Promise<void>;
   loading: boolean;
 }
@@ -83,6 +84,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCartCount(items.length);
     setCartTotal(cartData?.totalCartPrice ?? items.reduce((s: number, i: any) => s + i.price * (i.count ?? 1), 0));
     setCartTotalAfterDiscount(cartData?.totalPriceAfterDiscount);
+    // The server re-applies (or drops) the coupon on every cart change and
+    // reports which one is active, so this survives reloads.
+    setAppliedCoupon(cartData?.coupon?.name ? String(cartData.coupon.name).toUpperCase() : null);
   }
 
   const refreshCart = useCallback(async () => {
@@ -143,31 +147,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   /**
-   * Re-sync totals after a cart mutation (add qty, remove item, …).
-   * When a coupon is applied, the discount depends on the current line
-   * quantities/items, so we must re-apply it server-side to recalculate —
-   * otherwise cartTotalAfterDiscount (and per-line prices for scoped coupons)
-   * go stale. Falls back to the mutation's plain totals when no coupon is set
-   * or the coupon is no longer valid.
+   * Re-sync after a cart mutation (add qty, remove item, …). The server
+   * re-prices the cart and re-applies its coupon on every change, so the
+   * mutation's response already has the right lines and totals.
    */
-  const syncTotalsAfterMutation = async (mutationData: any, token: string) => {
-    if (!isMountedRef.current) return;
-    if (appliedCoupon) {
-      try {
-        const couponData = await applyCouponAPI(appliedCoupon, token);
-        if (!isMountedRef.current) return;
-        applyCartData(couponData);
-        return;
-      } catch {
-        if (!isMountedRef.current) return;
-        // Coupon expired / no longer applicable — drop it and use plain totals.
-        setAppliedCoupon(null);
-        setCartTotalAfterDiscount(undefined);
-      }
-    }
-    const cartData = (mutationData?.data && !Array.isArray(mutationData.data)) ? mutationData.data : mutationData;
-    if (!isMountedRef.current) return;
-    if (cartData?.totalCartPrice !== undefined) setCartTotal(cartData.totalCartPrice);
+  const syncTotalsAfterMutation = async (mutationData: any) => {
+    applyCartData(mutationData);
   };
 
   const removeFromCart = async (itemId: string) => {
@@ -181,7 +166,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return next;
       });
       const data = await removeCartItem(itemId, token);
-      await syncTotalsAfterMutation(data, token);
+      await syncTotalsAfterMutation(data);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } catch {
       // On error, refresh to get back to consistent state
@@ -198,7 +183,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         item._id === itemId ? { ...item, count: quantity } : item
       ));
       const data = await updateCartItemAPI(itemId, quantity, token);
-      await syncTotalsAfterMutation(data, token);
+      await syncTotalsAfterMutation(data);
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } catch {
       // On error, refresh to get back to consistent state
@@ -249,10 +234,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  /** Remove the active coupon client-side. */
-  const removeCoupon = () => {
+  /** Remove the active coupon (on the server too, so it isn't charged or redeemed). */
+  const removeCoupon = async () => {
     setAppliedCoupon(null);
     setCartTotalAfterDiscount(undefined);
+    const token = getToken();
+    if (!token) return;
+    try {
+      applyCartData(await removeCouponAPI(token));
+    } catch {
+      await refreshCart();
+    }
   };
 
   return (

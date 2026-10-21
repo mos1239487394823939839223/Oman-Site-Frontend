@@ -878,61 +878,6 @@ export async function createVisaOrder(cartId: string, paymentData: {
 
   return readJsonSafe(res);
 }
-
-// Mock Visa Payment API (for testing)
-export async function createMockVisaOrder(cartId: string, paymentData: {
-  shippingAddress: {
-    details: string;
-    phone: string;
-    city: string;
-    postalCode: string;
-  };
-  cardDetails: {
-    cardNumber: string;
-    expiryMonth: string;
-    expiryYear: string;
-    cvv: string;
-    cardholderName: string;
-  };
-}, token: string) {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  // Mock validation
-  const { cardNumber, expiryMonth, expiryYear, cvv, cardholderName } = paymentData.cardDetails;
-  
-  // Basic validation
-  if (!cardNumber || cardNumber.length < 16) {
-    throw new Error("Invalid card number");
-  }
-  
-  if (!expiryMonth || !expiryYear) {
-    throw new Error("Invalid expiry date");
-  }
-  
-  if (!cvv || cvv.length < 3) {
-    throw new Error("Invalid CVV");
-  }
-  
-  if (!cardholderName) {
-    throw new Error("Cardholder name is required");
-  }
-  
-  // Mock successful payment
-  return {
-    status: "success",
-    data: {
-      orderId: `ORD_${Date.now()}`,
-      paymentId: `PAY_${Date.now()}`,
-      amount: 1000, // Mock amount
-      status: "completed",
-      message: "Payment processed successfully"
-    }
-  };
-}
-
-// ─── User Profile ────────────────────────────────────────────────────────────
-
 export async function getMe(token: string) {
   const res = await fetch(`${API_BASE}/users/getMe`, {
     headers: { "Authorization": `Bearer ${token}` },
@@ -1063,6 +1008,15 @@ export async function applyCoupon(coupon: string, token: string) {
     const err = await res.json().catch(() => ({} as any));
     throw new Error(err?.message || "Failed to apply coupon");
   }
+  return res.json();
+}
+
+export async function removeCoupon(token: string) {
+  const res = await fetch(`${API_BASE}/cart/coupon`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to remove coupon");
   return res.json();
 }
 

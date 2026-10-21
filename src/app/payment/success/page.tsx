@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { FaCheckCircle, FaShoppingBag, FaHistory, FaEnvelope, FaWhatsapp } from "react-icons/fa";
 import styles from "./PaymentSuccess.module.css";
-import { confirmThawaniPayment } from "@/services/clientApi";
+import { confirmThawaniPayment, getFooter } from "@/services/clientApi";
 import { useCart } from "@/components/CartProvider";
 
 function PaymentSuccessPageContent() {
@@ -17,6 +17,20 @@ function PaymentSuccessPageContent() {
   // Confirm exactly once. clearCart isn't a stable reference, so listing it as
   // an effect dependency would re-run this and loop (clear → re-render → re-run).
   const startedRef = useRef(false);
+  // Support contacts come from Site Settings (same source as the footer).
+  const [contact, setContact] = useState<{ email: string; whatsapp: string }>({ email: "", whatsapp: "" });
+
+  useEffect(() => {
+    getFooter()
+      .then((res) => {
+        const f = res?.data || {};
+        setContact({
+          email: f.email || "",
+          whatsapp: (f.whatsapp || f.phone || "").replace(/\D/g, ""),
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -118,12 +132,16 @@ function PaymentSuccessPageContent() {
           <div className="mt-12 pt-10 border-t border-gray-100">
             <p className="text-xs text-gray-500 font-bold mb-4">هل لديك أي استفسار؟ تواصل معنا مباشرة</p>
             <div className="flex justify-center gap-4">
-              <a href="mailto:support@alnaseej.com" className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-[#5a1832] hover:text-white transition-all">
-                <FaEnvelope size={20} />
-              </a>
-              <a href="https://wa.me/00968" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-amber-500 hover:text-white transition-all">
-                <FaWhatsapp size={22} />
-              </a>
+              {contact.email && (
+                <a href={`mailto:${contact.email}`} className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-[#5a1832] hover:text-white transition-all">
+                  <FaEnvelope size={20} />
+                </a>
+              )}
+              {contact.whatsapp && (
+                <a href={`https://wa.me/${contact.whatsapp}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-amber-500 hover:text-white transition-all">
+                  <FaWhatsapp size={22} />
+                </a>
+              )}
             </div>
           </div>
         </div>
