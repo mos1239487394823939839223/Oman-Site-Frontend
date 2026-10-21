@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { FaTrashAlt, FaPlus, FaMinus, FaArrowLeft, FaShoppingCart, FaCity, FaPhoneAlt, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaTruck, FaBoxOpen, FaGift, FaShieldAlt, FaCheck, FaCheckCircle, FaHome } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
-import { createCashOrder, createThawaniSession, getCart } from "@/services/clientApi";
+import { createCashOrder, createThawaniSession, getCart, getFooter } from "@/services/clientApi";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { priceForCurrency } from "@/lib/currency";
@@ -41,7 +41,18 @@ export default function CartPage() {
     refreshCart();
   }, [refreshCart]);
 
-  const shippingFee = deliveryMethod === 'delivery' ? 2 : 0;
+  // Delivery fee is set by the admin in Site Settings (the server charges the
+  // same value). 2 is the fallback until it loads.
+  const [deliveryPrice, setDeliveryPrice] = useState(2);
+  useEffect(() => {
+    getFooter()
+      .then((res) => {
+        if (typeof res?.data?.deliveryPrice === 'number') setDeliveryPrice(res.data.deliveryPrice);
+      })
+      .catch(() => {});
+  }, []);
+
+  const shippingFee = deliveryMethod === 'delivery' ? deliveryPrice : 0;
   const wrappingFee = needsWrapping ? 5 : 0;
   // Use the coupon-discounted subtotal when a coupon is applied.
   const hasCoupon = typeof cartTotalAfterDiscount === 'number' && cartTotalAfterDiscount < cartTotal;
@@ -364,7 +375,7 @@ export default function CartPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div onClick={() => setDeliveryMethod('delivery')} className={sel(deliveryMethod === 'delivery')}>
                       <div className={iconBox(deliveryMethod === 'delivery')}><FaTruck size={16} /></div>
-                      <div><p className="font-black text-base">{t('cart.deliveryOptionDelivery')}</p><p className="text-sm text-[#D4AF37] font-bold">{format(shippingFee)}</p></div>
+                      <div><p className="font-black text-base">{t('cart.deliveryOptionDelivery')}</p><p className="text-sm text-[#D4AF37] font-bold">{format(deliveryPrice)}</p></div>
                     </div>
                     <div onClick={() => setDeliveryMethod('pickup')} className={sel(deliveryMethod === 'pickup')}>
                       <div className={iconBox(deliveryMethod === 'pickup')}><FaBoxOpen size={16} /></div>

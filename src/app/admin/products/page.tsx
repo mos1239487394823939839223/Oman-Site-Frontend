@@ -6,10 +6,12 @@ import { useToast } from "@/components/admin/ToastProvider";
 import { adminApi } from "@/services/adminApi";
 import { getCategories, getBrands } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
+import { formatPrice } from "@/lib/currency";
+import { getFriendlyError } from "@/lib/errors";
 import ProductForm from "@/components/admin/ProductForm";
 import {
   FaPlus, FaTimes, FaBox, FaSearch,
-  FaTrash, FaEdit, FaDatabase, FaStar
+  FaTrash, FaEdit, FaDatabase, FaStar, FaPercent
 } from "react-icons/fa";
 
 export default function ProductsManagementPage() {
@@ -23,6 +25,10 @@ export default function ProductsManagementPage() {
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [search, setSearch] = useState("");
+  // Percentage discount for a single product.
+  const [discountTarget, setDiscountTarget] = useState<any | null>(null);
+  const [discountPercent, setDiscountPercent] = useState("");
+  const [discountLoading, setDiscountLoading] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -62,6 +68,34 @@ export default function ProductsManagementPage() {
       toast.success("Deleted", `"${deleteTarget.title}" permanently removed`);
     } catch {
       toast.error("Delete Failed", "Could not delete product");
+    }
+  };
+
+  const confirmDiscount = async () => {
+    if (!discountTarget) return;
+    const pct = Number(discountPercent);
+    if (discountPercent === "" || !Number.isFinite(pct) || pct < 0 || pct >= 100) {
+      toast.error("Invalid value", "Enter a percentage between 0 and 99 (0 clears the discount).");
+      return;
+    }
+    try {
+      setDiscountLoading(true);
+      const res = await adminApi.applyProductDiscount(discountTarget._id, pct);
+      if (res?.data) {
+        setProducts(prev => prev.map(p => p._id === discountTarget._id ? { ...p, ...res.data } : p));
+      }
+      toast.success(
+        pct === 0 ? "Discount cleared" : "Discount applied",
+        pct === 0
+          ? `Removed the discount from "${discountTarget.title}".`
+          : `${pct}% off applied to "${discountTarget.title}".`
+      );
+      setDiscountTarget(null);
+      setDiscountPercent("");
+    } catch (error) {
+      toast.error("Failed", getFriendlyError(error, "Couldn't apply the discount. Please try again."));
+    } finally {
+      setDiscountLoading(false);
     }
   };
 
@@ -155,10 +189,19 @@ export default function ProductsManagementPage() {
                     )}
                   </div>
                 </div>
-                <div className="text-right text-gray-900 font-bold text-sm">
-                  {product.price?.toLocaleString()}
+                <div className="text-right">
+                  <div className="text-gray-900 font-bold text-sm">
+                    {formatPrice(product.priceAfterDiscount ?? product.price, "OMR")}
+                  </div>
+                  {product.priceAfterDiscount != null && (
+                    <div className="text-xs text-gray-400 line-through">{formatPrice(product.price, "OMR")}</div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 justify-end">
+                  <button onClick={() => { setDiscountTarget(product); setDiscountPercent(""); }} title="Apply a discount to this product"
+                    className="h-8 px-2.5 flex items-center gap-1.5 text-xs font-bold text-[#B8902F] bg-[#D4AF37]/10 rounded-lg hover:bg-[#D4AF37]/20 transition-colors border border-[#D4AF37]/20 whitespace-nowrap">
+                    <FaPercent className="w-3 h-3" /> خصم
+                  </button>
                   <button onClick={() => { setEditingProduct(product); setShowForm(true); }} className="w-8 h-8 flex items-center justify-center bg-[#5C2E3A]/10 text-[#5C2E3A] rounded-lg hover:bg-[#5C2E3A]/15 transition-colors border border-[#5C2E3A]/15">
                     <FaEdit className="w-3.5 h-3.5" />
                   </button>
@@ -176,6 +219,39 @@ export default function ProductsManagementPage() {
         message={`Permanently delete "${deleteTarget?.title}"? This cannot be undone.`}
         confirmText="Delete" cancelText="Cancel"
         onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} isDanger />
+
+      <ConfirmModal
+        isOpen={!!discountTarget}
+        title="Apply Discount to Product"
+        message={
+          <div className="space-y-3">
+            <p className="text-gray-600 text-sm">
+              Apply a percentage discount to{" "}
+              <span className="font-black text-[#5C2E3A]">{discountTarget?.title}</span>. It updates every currency price.
+            </p>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                max={99}
+                step={1}
+                value={discountPercent}
+                onChange={(e) => setDiscountPercent(e.target.value)}
+                placeholder="e.g. 20"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#5C2E3A]/30 focus:border-[#5C2E3A] outline-none font-bold text-gray-900 bg-white pr-10"
+              />
+              <span className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 font-bold">%</span>
+            </div>
+            <p className="text-xs text-gray-400">Enter 0 to remove the discount from this product.</p>
+          </div>
+        }
+        confirmText={discountLoading ? "Applying..." : "Apply"}
+        cancelText="Cancel"
+        onConfirm={confirmDiscount}
+        onCancel={() => { setDiscountTarget(null); setDiscountPercent(""); }}
+        isDanger={false}
+        isLoading={discountLoading}
+      />
     </>
   );
 }

@@ -11,7 +11,7 @@ import {
 } from "@/types/footer";
 import {
   FaSave, FaPhone, FaEnvelope, FaMapMarkerAlt, FaClock,
-  FaInstagram, FaWhatsapp, FaFacebook, FaTwitter, FaPlus, FaTrash,
+  FaInstagram, FaWhatsapp, FaFacebook, FaTwitter, FaPlus, FaTrash, FaTruck,
 } from "react-icons/fa";
 
 const emptyTranslation = (): FooterTranslation => ({ en: "", ar: "" });
@@ -24,6 +24,7 @@ const defaultFooter: FooterSettings = {
   home: emptyTranslation(), products: emptyTranslation(),
   reviews: emptyTranslation(), favorites: emptyTranslation(),
   cart: emptyTranslation(), rights: emptyTranslation(), links: [],
+  deliveryPrice: 2,
 };
 
 function footerPayload(data: FooterSettings): Record<string, unknown> {
@@ -205,6 +206,22 @@ export default function FooterPage() {
       </div>
 
       <div className="space-y-6">
+        <div className={sectionClass}>
+          <h2 className={headingClass}>Delivery</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <FooterField
+                label="Delivery Price (OMR)"
+                icon={FaTruck}
+                type="number"
+                value={String(footer.deliveryPrice ?? "")}
+                onChange={v => setFooter(prev => ({ ...prev, deliveryPrice: v === "" ? undefined : Number(v) }))}
+              />
+              <p className="text-xs text-gray-400 mt-2">Charged on home-delivery orders. Pickup stays free. Enter 0 for free delivery.</p>
+            </div>
+          </div>
+        </div>
+
         <div className={sectionClass}>
           <h2 className={headingClass}>Contact Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

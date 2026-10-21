@@ -35,6 +35,8 @@ export interface FooterSettings {
   cart?: FooterTranslation;
   rights?: FooterTranslation;
   links?: FooterLink[];
+  /** Home-delivery fee in OMR. */
+  deliveryPrice?: number;
   createdAt?: string;
   updatedAt?: string;
   __v?: number;

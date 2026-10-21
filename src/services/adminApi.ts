@@ -169,6 +169,11 @@ export const adminApi = {
       method: "PUT",
       body: JSON.stringify({ discountPercent }),
     }),
+  applyProductDiscount: (productId: string, discountPercent: number) =>
+    apiRequest(`/products/${productId}/discount`, {
+      method: "PUT",
+      body: JSON.stringify({ discountPercent }),
+    }),
 
   // ─── Brands ────────────────────────────────────────────────────────────────
   getAllBrands: () => apiRequest("/brands?limit=1000"),

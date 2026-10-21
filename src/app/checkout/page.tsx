@@ -39,7 +39,7 @@ import { useCart } from "@/components/CartProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { useAppSnackbar } from "@/components/mui/AppSnackbarProvider";
-import { createCashOrder, createThawaniSession, getCart } from "@/services/clientApi";
+import { createCashOrder, createThawaniSession, getCart, getFooter } from "@/services/clientApi";
 import { resolveMediaUrl } from "@/lib/media";
 
 type CheckoutFormValues = {
@@ -113,7 +113,16 @@ export default function CheckoutPage() {
     cartTotalAfterDiscount < cartTotal;
 
   const subtotal = hasDiscount ? (cartTotalAfterDiscount as number) : cartTotal;
-  const shippingFee = 0;
+  // Delivery fee from Site Settings — the server charges this on every
+  // delivery order, so show the same amount here.
+  const [shippingFee, setShippingFee] = useState(2);
+  useEffect(() => {
+    getFooter()
+      .then((res) => {
+        if (typeof res?.data?.deliveryPrice === "number") setShippingFee(res.data.deliveryPrice);
+      })
+      .catch(() => {});
+  }, []);
   const finalTotal = useMemo(() => subtotal + shippingFee, [subtotal, shippingFee]);
 
   const handleApplyCoupon = async () => {
@@ -613,7 +622,7 @@ export default function CheckoutPage() {
 
                     <Stack direction="row" sx={{ justifyContent: "space-between" }}>
                       <Typography color="text.secondary">Shipping</Typography>
-                      <Typography sx={{ fontWeight: 700 }}>Free</Typography>
+                      <Typography sx={{ fontWeight: 700 }}>{shippingFee === 0 ? "Free" : format(shippingFee)}</Typography>
                     </Stack>
 
                     <Box sx={{ borderTop: "1px solid", borderColor: "divider", pt: 1.25 }}>
