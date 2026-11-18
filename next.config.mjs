@@ -13,6 +13,7 @@ const nextConfig = {
   // Produce a self-contained server bundle so the Docker image can run with just
   // `node server.js` and doesn't need node_modules or the full source tree.
   output: 'standalone',
+  poweredByHeader: false,
 
   // Two lockfiles exist (~/package-lock.json and this project's). Pin the trace
   // root to this project so Next optimizes/traces from the correct workspace.
@@ -61,44 +62,34 @@ const nextConfig = {
     // Next.js only honors qualities listed here (default is [75]).
     qualities: [75, 90, 100],
 
-    // Legacy domains list (kept for compatibility)
-    domains: [
-      'images.unsplash.com',
-      'ecommerce.routemisr.com',
-      'alsahwa.om',
-      'encrypted-tbn0.gstatic.com',
-      'lh3.googleusercontent.com',
-      'via.placeholder.com',
-      'placehold.co',
-      'pbs.twimg.com',
-      'abs.twimg.com',
-      'cdn.cloudinary.com',
-      'res.cloudinary.com',
-      'i.imgur.com',
-    ],
+    // WebP only. Don't add AVIF or allow SVG: both have had image-optimizer
+    // RCEs. The optimizer only fetches from the hosts listed below — never
+    // add a "**" wildcard (it lets anyone feed arbitrary images to it).
+    formats: ['image/webp'],
+    dangerouslyAllowSVG: false,
 
-    // Universal wildcard — allows any https image source.
-    // This prevents runtime errors from any external CDN the data layer returns.
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'http',
-        hostname: '**',
-        port: '',
-        pathname: '/**',
-      },
-      // Backend images served from localhost with a port number
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '8000',
-        pathname: '/**',
-      },
+      // Our own API / uploads.
+      { protocol: 'https', hostname: 'api.watani-owt.cloud', pathname: '/**' },
+      { protocol: 'https', hostname: 'watani-owt.cloud', pathname: '/**' },
+      // External hosts that existing product data may point at. Remove any that
+      // no longer appear in the database.
+      { protocol: 'https', hostname: 'res.cloudinary.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'ecommerce.routemisr.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'alsahwa.om', pathname: '/**' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'i.imgur.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'cdn.cloudinary.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'encrypted-tbn0.gstatic.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'pbs.twimg.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'abs.twimg.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'via.placeholder.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'placehold.co', pathname: '/**' },
+      // Local development backend.
+      ...(process.env.NODE_ENV === 'production'
+        ? []
+        : [{ protocol: 'http', hostname: 'localhost', port: '8000', pathname: '/**' }]),
     ],
   },
 };
