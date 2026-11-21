@@ -1,50 +1,82 @@
-E-commerce App (Next.js App Router)
+<div align="center">
 
-Requirements implemented:
-- App Router structure with Tailwind CSS
-- Navbar with links: Home, Products, Categories, Brands, Cart, Wishlist, Login, Signup
-- API base: https://ecommerce.routemisr.com/api/v1
+# 🛍️ Oman E-Commerce — Storefront
 
-Run locally:
-1. npm install
-2. npm run dev
-3. Open http://localhost:3000
+**Bilingual (Arabic / English) online store built with Next.js — full RTL support, real-time updates and online checkout.**
 
-Notes:
-- This template uses Tailwind v4 via `@import "tailwindcss"` in `src/app/globals.css`.
-- Add environment variables as needed for secure endpoints.
+![Next.js](https://img.shields.io/badge/Next.js_15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![MUI](https://img.shields.io/badge/MUI-007FFF?style=for-the-badge&logo=mui&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-0EA5E9?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![i18next](https://img.shields.io/badge/i18next-26A69A?style=for-the-badge&logo=i18next&logoColor=white)
 
-## Getting Started
+</div>
 
-First, run the development server:
+---
+
+## ✨ Features
+
+- 🌍 **Arabic & English** with automatic language detection and true **RTL layouts** (MUI + stylis RTL plugin)
+- 🏠 Home page with dynamic banners managed from the admin
+- 🗂️ Browse by **categories, sub-categories and brands**; product details with reviews
+- 🛒 **Cart, wishlist, coupons and gifts**
+- 📦 Order history and product reviews
+- 💳 **Checkout** with saved addresses and online payment (Thawani Pay)
+- 👤 Signup, login, password reset and profile management
+- 🛠️ **Admin area** for products, orders, banners and content
+- ⚡ Real-time updates via Socket.io
+- 🐳 Dockerfile for container deployment
+
+## 🧰 Tech Stack
+
+| Layer | Tools |
+|---|---|
+| Framework | Next.js 15 (App Router), React 19, TypeScript |
+| UI | MUI, Tailwind CSS v4, React Icons |
+| i18n | i18next, react-i18next, browser language detector |
+| Forms | React Hook Form |
+| Realtime | Socket.io client |
+
+## 🚀 Getting Started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/mos1239487394823939839223/Oman-Site-Frontend.git
+cd Oman-Site-Frontend
+npm install
+npm run dev            # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Point the app to the API in `.env.local`:
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_SOCKET_URL=http://localhost:8000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Description |
+|---|---|
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm start` | Serve production build |
+| `npm run type-check` | TypeScript check |
 
-## Learn More
+### 🐳 Docker
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+docker build -t oman-frontend .
+docker run -p 3000:3000 oman-frontend
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🔗 Related
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Backend API: **[Oman-Site-Backend](https://github.com/mos1239487394823939839223/Oman-Site-Backend)**
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+<div align="center">
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built by **[Mustafa Anwer Hamed](https://github.com/mos1239487394823939839223)**
+
+</div>
